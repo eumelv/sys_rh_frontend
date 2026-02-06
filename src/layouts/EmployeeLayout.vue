@@ -29,6 +29,24 @@
           <i class="pi pi-calendar"></i>
           <span v-if="!isCollapsed">Férias & Licenças</span>
         </router-link>
+        
+        <!-- Novos itens adicionados -->
+        <router-link to="/employee/documents" class="nav-item">
+          <i class="pi pi-file"></i>
+          <span v-if="!isCollapsed">Documentos</span>
+        </router-link>
+        <router-link to="/employee/requests" class="nav-item">
+          <i class="pi pi-send"></i>
+          <span v-if="!isCollapsed">Solicitações</span>
+        </router-link>
+        <router-link to="/employee/announcements" class="nav-item">
+          <i class="pi pi-megaphone"></i>
+          <span v-if="!isCollapsed">Comunicados</span>
+        </router-link>
+        <router-link to="/employee/settings" class="nav-item">
+          <i class="pi pi-cog"></i>
+          <span v-if="!isCollapsed">Definições</span>
+        </router-link>
       </nav>
 
       <div class="sidebar-footer">
@@ -88,6 +106,10 @@ const currentPageTitle = computed(() => {
     'EmployeeProfile': 'Meu Perfil',
     'EmployeeAttendance': 'Registo de Presenças',
     'EmployeeLeaves': 'Minhas Férias & Licenças',
+    'EmployeeDocuments': 'Meus Documentos',
+    'EmployeeRequests': 'Solicitações',
+    'EmployeeAnnouncements': 'Comunicados',
+    'EmployeeSettings': 'Definições',
   }
   return titles[route.name] || 'Portal do Colaborador'
 })
@@ -165,6 +187,21 @@ const logout = async () => {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  overflow-y: auto; /* Adiciona scroll se necessário */
+}
+
+/* Estilização da scrollbar */
+.sidebar-nav::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-nav::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
 }
 
 .nav-item {
@@ -179,6 +216,7 @@ const logout = async () => {
   border: none;
   background: none;
   width: 100%;
+  font-size: 0.9375rem;
 }
 
 .nav-item i {
@@ -194,6 +232,17 @@ const logout = async () => {
 .nav-item.router-link-active {
   color: white;
   background-color: #10b981;
+  position: relative;
+}
+
+.nav-item.router-link-active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background-color: white;
 }
 
 .sidebar-footer {
@@ -290,5 +339,25 @@ const logout = async () => {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    z-index: 1000;
+  }
+  
+  .sidebar.collapsed {
+    transform: translateX(-100%);
+  }
+  
+  .header {
+    padding: 0 1rem;
+  }
+  
+  .content-body {
+    padding: 1rem;
+  }
 }
 </style>

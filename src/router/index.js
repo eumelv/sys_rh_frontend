@@ -103,7 +103,6 @@ const routes = [
         path: 'payroll',
         name: 'Payroll',
         component: () => import('@/views/admin/Payroll.vue'),
-        // meta: { requiresFeature: 'payroll' }, // Temporarily disabled for testing
       },
       {
         path: 'recruitment',
@@ -158,15 +157,33 @@ const routes = [
         name: 'EmployeeLeaves',
         component: () => import('@/views/employee/Leaves.vue'),
       },
+      // ✅ NOVAS ROTAS ADICIONADAS AQUI
+      {
+        path: 'documents',
+        name: 'EmployeeDocuments',
+        component: () => import('@/views/employee/Documents.vue'),
+      },
+      {
+        path: 'requests',
+        name: 'EmployeeRequests',
+        component: () => import('@/views/employee/Requests.vue'),
+      },
+      {
+        path: 'announcements',
+        name: 'EmployeeAnnouncements',
+        component: () => import('@/views/employee/Announcements.vue'),
+      },
+      {
+        path: 'financial',
+        name: 'EmployeeFinancial',
+        component: () => import('@/views/employee/Financial.vue'),
+      },
+      {
+        path: 'settings',
+        name: 'EmployeeSettings',
+        component: () => import('@/views/employee/Settings.vue'),
+      },
     ],
-  },
-
-  // Public careers portal
-  {
-    path: '/careers',
-    name: 'CareersPortal',
-    component: () => import('@/views/public/CareersPortal.vue'),
-    meta: { requiresAuth: false, layout: 'blank' },
   },
 
   // 404
@@ -196,14 +213,12 @@ router.beforeEach(async (to, from, next) => {
     }
   }
 
-  // If still loading, wait or proceed carefully (usually authStore.user will be populated above)
-
   // Check authentication
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     return next('/login')
   }
 
-  // Redirect authenticated users away from auth pages (login/register)
+  // Redirect authenticated users away from auth pages
   if (!to.meta.requiresAuth && authStore.isAuthenticated) {
     if (authStore.isSuperAdmin && to.path.startsWith('/login')) {
       return next('/super-admin/dashboard')
