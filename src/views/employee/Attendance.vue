@@ -25,10 +25,10 @@
               <i class="pi pi-sign-in"></i>
               <span>{{ loading ? 'Registando...' : 'Bater Entrada' }}</span>
             </button>
-            <p v-if="schedule" class="schedule-info">
-              <i class="pi pi-clock"></i>
-              Horário: {{ schedule.start_time }} - {{ schedule.end_time }}
-            </p>
+              <p v-if="schedule" class="schedule-info">
+                <i class="pi pi-clock"></i>
+                Horário: {{ schedule.start_time || 'N/A' }} - {{ schedule.end_time || 'N/A' }}
+              </p>
             <p v-else class="schedule-info warning">
               <i class="pi pi-exclamation-triangle"></i>
               Sem horário de trabalho definido
@@ -317,24 +317,39 @@ const fetchData = async () => {
   ])
 }
 
-const fetchTodayData = async () => {
-  try {
-    const { data } = await api.get('/employee/attendance/today')
-    todayAttendance.value = data
-  } catch (error) {
-    console.error('Erro ao carregar presença de hoje:', error)
-  }
-}
 
 const fetchEmployeeInfo = async () => {
   try {
     const { data } = await api.get('/employee/profile')
-    schedule.value = data.work_schedule
+    
+    // ✅ Suportar ambos os formatos
+    if (data.workSchedule) {
+      schedule.value = data.workSchedule
+    } else if (data.work_schedule) {
+      schedule.value = data.work_schedule
+    } else {
+      schedule.value = null
+    }
+    
+    console.log('Employee profile:', data)
+    console.log('Schedule:', schedule.value)
+    
   } catch (error) {
     console.error('Erro ao carregar informações do colaborador:', error)
+    schedule.value = null
   }
 }
 
+const fetchTodayData = async () => {
+  try {
+    const { data } = await api.get('/employee/attendance/today')
+    todayAttendance.value = data
+    console.log('Today attendance:', data)
+  } catch (error) {
+    console.error('Erro ao carregar presença de hoje:', error)
+    todayAttendance.value = null
+  }
+}
 const fetchMonthlySummary = async () => {
   try {
     const { data } = await api.get('/employee/attendance/summary')

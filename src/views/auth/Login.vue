@@ -93,16 +93,31 @@ const handleLogin = async () => {
       password: form.password,
     })
 
+    console.log('=== LOGIN DEBUG ===')
+    console.log('Email:', form.email)
+    console.log('is_employee:', response.is_employee)
+    console.log('employee:', response.employee)
+
     toast.success('Login realizado com sucesso!')
 
-    // Redirect based on role
-    if (authStore.isSuperAdmin) {
-      router.push('/super-admin/dashboard')
-    } else if (authStore.isAdmin) {
-      router.push('/admin/dashboard')
+    // ✅ AGUARDAR UM POUCO ANTES DE REDIRECIONAR
+    await new Promise(resolve => setTimeout(resolve, 100))
+
+    // ✅ REDIRECIONAR COM REPLACE (evita voltar)
+    if (response.is_employee) {
+      console.log('→ Employee: redirecionando para /employee/dashboard')
+      await router.replace('/employee/dashboard')
+    } else if (authStore.isSuperAdmin) {
+      console.log('→ Super Admin: redirecionando para /super-admin/dashboard')
+      await router.replace('/super-admin/dashboard')
     } else {
-      router.push('/employee/dashboard')
+      console.log('→ Admin: redirecionando para /admin/dashboard')
+      await router.replace('/admin/dashboard')
     }
+
+    // ✅ RECARREGAR A PÁGINA PARA GARANTIR
+    window.location.href = response.is_employee ? '/employee/dashboard' : '/admin/dashboard'
+
   } catch (error) {
     const message = error.response?.data?.message || 'Erro ao fazer login'
     toast.error(message)
@@ -110,6 +125,7 @@ const handleLogin = async () => {
     loading.value = false
   }
 }
+
 </script>
 
 <style scoped>

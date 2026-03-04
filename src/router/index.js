@@ -114,6 +114,12 @@ const routes = [
         name: 'Leaves',
         component: () => import('@/views/admin/Leaves.vue'),
       },
+        {
+        path: 'leave-types',
+        name: 'AdminLeaveTypes',
+        component: () => import('@/views/admin/LeaveTypes.vue'),
+        meta: { title: 'Tipos de Licença' }
+      },
       {
         path: 'attendance',
         name: 'Attendance',
@@ -199,50 +205,52 @@ const router = createRouter({
   history: createWebHistory(),
   routes,
 })
-
 // Navigation guards
-router.beforeEach(async (to, from, next) => {
+router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
 
-  // If we have a token but no user, and not already loading, fetch user
-  if (authStore.isAuthenticated && !authStore.user && !authStore.isLoading) {
-    try {
-      await authStore.fetchUser()
-    } catch (error) {
-      return next('/login')
-    }
-  }
-
-  // Check authentication
+  // Se não está autenticado e a rota requer auth
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    return next('/login')
+    next('/login')
+    return
   }
 
-  // Redirect authenticated users away from auth pages
-  if (!to.meta.requiresAuth && authStore.isAuthenticated) {
-    if (authStore.isSuperAdmin && to.path.startsWith('/login')) {
-      return next('/super-admin/dashboard')
-    } else if (authStore.isAdmin && to.path.startsWith('/login')) {
-      return next('/admin/dashboard')
-    } else if (to.path.startsWith('/login')) {
-      return next('/employee/dashboard')
+  // ✅ REDIRECIONAR usuários autenticados que tentam acessar login/register
+  if ((to.path === '/login' || to.path === '/register') && authStore.isAuthenticated) {
+    // ✅ USAR is_employee ao invés de roles
+    if (authStore.isEmployee) {
+      next('/employee/dashboard')
+    } else if (authStore.isSuperAdmin) {
+      next('/super-admin/dashboard')
+    } else {
+      next('/admin/dashboard')
     }
+    return
   }
 
-  // Check super admin
+  // ✅ Check super admin
   if (to.meta.requiresSuperAdmin && !authStore.isSuperAdmin) {
-    return next('/admin/dashboard')
+    next('/admin/dashboard')
+    return
   }
 
-  // Check admin
-  if (to.meta.requiresAdmin && !authStore.isAdmin) {
-    return next('/employee/dashboard')
+  // ✅ Check admin - USAR is_employee NEGADO
+  if (to.meta.requiresAdmin && authStore.isEmployee) {
+    next('/employee/dashboard')
+    return
+  }
+
+  // ✅ Check employee - rotas employee só para quem TEM employee
+  if (to.path.startsWith('/employee') && !authStore.isEmployee) {
+    next('/admin/dashboard')
+    return
   }
 
   // Check feature access
   if (to.meta.requiresFeature) {
     if (!authStore.hasFeature(to.meta.requiresFeature)) {
-      return next('/admin/dashboard')
+      next('/admin/dashboard')
+      return
     }
   }
 

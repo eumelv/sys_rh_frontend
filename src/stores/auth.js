@@ -7,8 +7,10 @@ export const useAuthStore = defineStore('auth', {
     user: JSON.parse(localStorage.getItem('user')) || null,
     company: JSON.parse(localStorage.getItem('company')) || null,
     token: localStorage.getItem('token') || null,
+    employee: JSON.parse(localStorage.getItem('employee')) || null, // ✅ ADICIONAR
+    isEmployee: localStorage.getItem('is_employee') === 'true', // ✅ ADICIONAR
     isAuthenticated: !!localStorage.getItem('token'),
-    isLoading: false, // Flag to track initial data fetch
+    isLoading: false,
   }),
 
   getters: {
@@ -20,9 +22,10 @@ export const useAuthStore = defineStore('auth', {
         state.user?.roles?.includes('super-admin') ||
         false
     },
-    isEmployee: (state) => {
-      return state.user?.roles?.includes('employee') || false
-    },
+    // ✅ REMOVER este getter antigo
+    // isEmployee: (state) => {
+    //   return state.user?.roles?.includes('employee') || false
+    // },
     currentPlan: (state) => {
       return state.company?.subscription?.plan_slug || null
     },
@@ -39,10 +42,20 @@ export const useAuthStore = defineStore('auth', {
         this.token = response.data.token
         this.user = response.data.user
         this.company = response.data.company
+        this.employee = response.data.employee // ✅ ADICIONAR
+        this.isEmployee = response.data.is_employee // ✅ ADICIONAR
         this.isAuthenticated = true
 
         localStorage.setItem('token', this.token)
         localStorage.setItem('user', JSON.stringify(this.user))
+        localStorage.setItem('company', JSON.stringify(this.company))
+        localStorage.setItem('employee', JSON.stringify(this.employee)) // ✅ ADICIONAR
+        localStorage.setItem('is_employee', this.isEmployee) // ✅ ADICIONAR
+
+        // ✅ LOG PARA DEBUG
+        console.log('=== AUTH STORE LOGIN ===')
+        console.log('is_employee:', this.isEmployee)
+        console.log('employee:', this.employee)
 
         return response.data
       } catch (error) {
@@ -57,10 +70,15 @@ export const useAuthStore = defineStore('auth', {
         this.token = response.data.token
         this.user = response.data.user
         this.company = response.data.company
+        this.employee = response.data.employee // ✅ ADICIONAR
+        this.isEmployee = response.data.is_employee // ✅ ADICIONAR
         this.isAuthenticated = true
 
         localStorage.setItem('token', this.token)
         localStorage.setItem('user', JSON.stringify(this.user))
+        localStorage.setItem('company', JSON.stringify(this.company))
+        localStorage.setItem('employee', JSON.stringify(this.employee)) // ✅ ADICIONAR
+        localStorage.setItem('is_employee', this.isEmployee) // ✅ ADICIONAR
 
         return response.data
       } catch (error) {
@@ -77,11 +95,15 @@ export const useAuthStore = defineStore('auth', {
         this.user = null
         this.company = null
         this.token = null
+        this.employee = null // ✅ ADICIONAR
+        this.isEmployee = false // ✅ ADICIONAR
         this.isAuthenticated = false
 
         localStorage.removeItem('token')
         localStorage.removeItem('user')
         localStorage.removeItem('company')
+        localStorage.removeItem('employee') // ✅ ADICIONAR
+        localStorage.removeItem('is_employee') // ✅ ADICIONAR
 
         router.push('/login')
       }
