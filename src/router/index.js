@@ -184,11 +184,12 @@ const routes = [
         name: 'EmployeeFinancial',
         component: () => import('@/views/employee/Financial.vue'),
       },
-      {
-        path: 'settings',
-        name: 'EmployeeSettings',
-        component: () => import('@/views/employee/Settings.vue'),
-      },
+  {
+      path: 'settings',
+      name: 'EmployeeSettings',
+      component: () => import('@/views/employee/Settings.vue'),
+      meta: { title: 'Definições' }
+    },
     ],
   },
 
@@ -240,7 +241,7 @@ router.beforeEach((to, from, next) => {
     return
   }
 
-  // ✅ Check employee - rotas employee só para quem TEM employee
+  // Check employee - rotas employee só para quem TEM employee
   if (to.path.startsWith('/employee') && !authStore.isEmployee) {
     next('/admin/dashboard')
     return

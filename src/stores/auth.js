@@ -7,28 +7,34 @@ export const useAuthStore = defineStore('auth', {
     user: JSON.parse(localStorage.getItem('user')) || null,
     company: JSON.parse(localStorage.getItem('company')) || null,
     token: localStorage.getItem('token') || null,
-    employee: JSON.parse(localStorage.getItem('employee')) || null, // ✅ ADICIONAR
-    isEmployee: localStorage.getItem('is_employee') === 'true', // ✅ ADICIONAR
+    employee: JSON.parse(localStorage.getItem('employee')) || null,
+    isEmployee: localStorage.getItem('is_employee') === 'true',
     isAuthenticated: !!localStorage.getItem('token'),
     isLoading: false,
   }),
 
   getters: {
+    // ✅ CORRIGIDO: Usar campo 'role' ao invés de 'roles'
     isSuperAdmin: (state) => {
-      return state.user?.roles?.includes('super-admin') || false
+      return state.user?.role === 'super-admin'
     },
+    
     isAdmin: (state) => {
-      return state.user?.roles?.includes('admin') ||
-        state.user?.roles?.includes('super-admin') ||
-        false
+      return state.user?.role === 'admin' || state.user?.role === 'super-admin'
     },
-    // ✅ REMOVER este getter antigo
-    // isEmployee: (state) => {
-    //   return state.user?.roles?.includes('employee') || false
-    // },
+    
+    isManager: (state) => {
+      return state.user?.role === 'manager'
+    },
+    
+    userRole: (state) => {
+      return state.user?.role || null
+    },
+    
     currentPlan: (state) => {
       return state.company?.subscription?.plan_slug || null
     },
+    
     hasFeature: (state) => (feature) => {
       return state.company?.subscription?.features?.includes(feature) || false
     },
@@ -42,20 +48,22 @@ export const useAuthStore = defineStore('auth', {
         this.token = response.data.token
         this.user = response.data.user
         this.company = response.data.company
-        this.employee = response.data.employee // ✅ ADICIONAR
-        this.isEmployee = response.data.is_employee // ✅ ADICIONAR
+        this.employee = response.data.employee
+        this.isEmployee = response.data.is_employee
         this.isAuthenticated = true
 
         localStorage.setItem('token', this.token)
         localStorage.setItem('user', JSON.stringify(this.user))
         localStorage.setItem('company', JSON.stringify(this.company))
-        localStorage.setItem('employee', JSON.stringify(this.employee)) // ✅ ADICIONAR
-        localStorage.setItem('is_employee', this.isEmployee) // ✅ ADICIONAR
+        localStorage.setItem('employee', JSON.stringify(this.employee))
+        localStorage.setItem('is_employee', this.isEmployee)
 
-        // ✅ LOG PARA DEBUG
+        // ✅ LOG DETALHADO
         console.log('=== AUTH STORE LOGIN ===')
-        console.log('is_employee:', this.isEmployee)
-        console.log('employee:', this.employee)
+        console.log('User:', this.user)
+        console.log('Role:', this.user?.role)
+        console.log('Is Admin:', this.isAdmin)
+        console.log('Is Employee:', this.isEmployee)
 
         return response.data
       } catch (error) {
@@ -70,15 +78,15 @@ export const useAuthStore = defineStore('auth', {
         this.token = response.data.token
         this.user = response.data.user
         this.company = response.data.company
-        this.employee = response.data.employee // ✅ ADICIONAR
-        this.isEmployee = response.data.is_employee // ✅ ADICIONAR
+        this.employee = response.data.employee
+        this.isEmployee = response.data.is_employee
         this.isAuthenticated = true
 
         localStorage.setItem('token', this.token)
         localStorage.setItem('user', JSON.stringify(this.user))
         localStorage.setItem('company', JSON.stringify(this.company))
-        localStorage.setItem('employee', JSON.stringify(this.employee)) // ✅ ADICIONAR
-        localStorage.setItem('is_employee', this.isEmployee) // ✅ ADICIONAR
+        localStorage.setItem('employee', JSON.stringify(this.employee))
+        localStorage.setItem('is_employee', this.isEmployee)
 
         return response.data
       } catch (error) {
@@ -95,15 +103,15 @@ export const useAuthStore = defineStore('auth', {
         this.user = null
         this.company = null
         this.token = null
-        this.employee = null // ✅ ADICIONAR
-        this.isEmployee = false // ✅ ADICIONAR
+        this.employee = null
+        this.isEmployee = false
         this.isAuthenticated = false
 
         localStorage.removeItem('token')
         localStorage.removeItem('user')
         localStorage.removeItem('company')
-        localStorage.removeItem('employee') // ✅ ADICIONAR
-        localStorage.removeItem('is_employee') // ✅ ADICIONAR
+        localStorage.removeItem('employee')
+        localStorage.removeItem('is_employee')
 
         router.push('/login')
       }
@@ -116,8 +124,14 @@ export const useAuthStore = defineStore('auth', {
         const response = await api.get('/auth/me')
         this.user = response.data.user
         this.company = response.data.company
+        this.employee = response.data.employee
+        this.isEmployee = response.data.is_employee
+        
         localStorage.setItem('user', JSON.stringify(this.user))
         localStorage.setItem('company', JSON.stringify(this.company))
+        localStorage.setItem('employee', JSON.stringify(this.employee))
+        localStorage.setItem('is_employee', this.isEmployee)
+        
         return response.data
       } catch (error) {
         this.logout()
@@ -134,6 +148,7 @@ export const useAuthStore = defineStore('auth', {
 
     setCompany(company) {
       this.company = company
+      localStorage.setItem('company', JSON.stringify(company))
     },
   },
 })

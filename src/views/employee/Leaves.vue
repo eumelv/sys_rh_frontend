@@ -1,242 +1,222 @@
 <template>
-  <div class="employee-leaves-page">
+  <div class="leaves-page">
+    <!-- Header -->
     <div class="page-header">
-      <div>
-        <h2>Minhas Licenças</h2>
-        <p class="subtitle">Solicite e acompanhe suas licenças</p>
+      <div class="header-left">
+        <div class="header-icon">
+          <i class="pi pi-calendar"></i>
+        </div>
+        <div class="header-text">
+          <h1>Férias & Licenças</h1>
+          <p class="subtitle">Solicite e acompanhe suas licenças e ausências</p>
+        </div>
       </div>
-      <button @click="showRequestModal = true" class="btn-primary">
+      <button class="btn-new" @click="showRequestModal = true">
         <i class="pi pi-plus"></i>
         Nova Solicitação
       </button>
     </div>
 
-    <!-- Saldo de Licenças -->
-    <div class="balance-cards">
-      <Card v-for="balance in leaveBalance" :key="balance.leave_type_id" class="balance-card">
-        <div class="balance-header">
-          <h3>{{ balance.leave_type_name }}</h3>
+    <!-- Stats Grid -->
+    <div class="stats-grid">
+      <div class="stat-card yellow">
+        <div class="stat-icon">
+          <i class="pi pi-clock"></i>
         </div>
-        <div class="balance-stats">
-          <div class="stat">
-            <span class="label">Disponível</span>
-            <span class="value success">{{ balance.available_days }}</span>
-          </div>
-          <div class="stat">
-            <span class="label">Usado</span>
-            <span class="value">{{ balance.used_days }}</span>
-          </div>
-          <div class="stat">
-            <span class="label">Pendente</span>
-            <span class="value warning">{{ balance.pending_days }}</span>
-          </div>
-          <div class="stat">
-            <span class="label">Total</span>
-            <span class="value info">{{ balance.total_days }}</span>
-          </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ getCountByStatus('pending') }}</span>
+          <span class="stat-label">Pendentes</span>
         </div>
-      </Card>
+      </div>
+
+      <div class="stat-card green">
+        <div class="stat-icon">
+          <i class="pi pi-check-circle"></i>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ getCountByStatus('approved') }}</span>
+          <span class="stat-label">Aprovadas</span>
+        </div>
+      </div>
+
+      <div class="stat-card red">
+        <div class="stat-icon">
+          <i class="pi pi-times-circle"></i>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ getCountByStatus('rejected') }}</span>
+          <span class="stat-label">Rejeitadas</span>
+        </div>
+      </div>
+
+      <div class="stat-card blue">
+        <div class="stat-icon">
+          <i class="pi pi-eye"></i>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ getCountByStatus('cancelled') }}</span>
+          <span class="stat-label">Em Análise</span>
+        </div>
+      </div>
     </div>
 
-    <!-- Filtros -->
-    <Card class="filters-card">
-      <div class="filters">
-        <button 
-          @click="filterStatus = 'all'" 
-          :class="{ active: filterStatus === 'all' }"
-          class="filter-btn"
-        >
-          Todas
-        </button>
-        <button 
-          @click="filterStatus = 'pending'" 
-          :class="{ active: filterStatus === 'pending' }"
-          class="filter-btn"
-        >
-          Pendentes
-        </button>
-        <button 
-          @click="filterStatus = 'approved'" 
-          :class="{ active: filterStatus === 'approved' }"
-          class="filter-btn"
-        >
-          Aprovadas
-        </button>
-        <button 
-          @click="filterStatus = 'rejected'" 
-          :class="{ active: filterStatus === 'rejected' }"
-          class="filter-btn"
-        >
-          Rejeitadas
-        </button>
-      </div>
-    </Card>
-
-    <!-- Listagem de Licenças -->
-    <Card>
-      <div v-if="loading" class="loading-state">
-        <i class="pi pi-spin pi-spinner"></i>
-        Carregando...
+    <!-- Filters -->
+    <div class="filters-section filters-card">
+      <div class="filter-item">
+        <label>Tipo de Solicitação</label>
+        <select v-model="filterType" class="filter-select">
+          <option value="">Todos os tipos</option>
+          <option v-for="type in leaveTypes" :key="type.id" :value="type.id">
+            {{ type.name }}
+          </option>
+        </select>
       </div>
 
-      <div v-else-if="filteredLeaves.length === 0" class="empty-state">
-        <i class="pi pi-calendar-times"></i>
-        <p>{{ filterStatus === 'all' ? 'Nenhuma licença solicitada ainda' : `Nenhuma licença ${filterStatus}` }}</p>
-        <button v-if="filterStatus === 'all'" @click="showRequestModal = true" class="btn-primary">
-          Solicitar Licença
-        </button>
+      <div class="filter-item">
+        <label>Status</label>
+        <select v-model="filterStatus" class="filter-select">
+          <option value="all">Todos os status</option>
+          <option value="pending">Pendente</option>
+          <option value="approved">Aprovado</option>
+          <option value="rejected">Rejeitado</option>
+          <option value="cancelled">Cancelado</option>
+        </select>
       </div>
+    </div>
 
-      <div v-else class="leaves-list">
-        <div v-for="leave in filteredLeaves" :key="leave.id" class="leave-card">
-          <div class="leave-header">
-            <div class="leave-type">
-              <i class="pi pi-briefcase"></i>
-              <span>{{ leave.leave_type?.name }}</span>
-            </div>
-            <span class="status-badge" :class="leave.status">
-              {{ getStatusLabel(leave.status) }}
-            </span>
+    <!-- Loading -->
+    <div v-if="loading" class="loading-state">
+      <i class="pi pi-spin pi-spinner"></i>
+      <p>Carregando licenças...</p>
+    </div>
+
+    <!-- Empty State -->
+    <div v-else-if="filteredLeaves.length === 0" class="empty-state">
+      <i class="pi pi-inbox"></i>
+      <h3>Nenhuma solicitação encontrada</h3>
+      <p>Você ainda não possui solicitações de licença</p>
+    </div>
+
+    <!-- Leaves List -->
+    <div v-else class="leaves-list">
+      <div 
+        v-for="leave in filteredLeaves" 
+        :key="leave.id" 
+        class="leave-card"
+        :class="`border-${leave.status}`"
+      >
+        <div class="leave-header">
+          <div class="leave-type">
+            <i class="pi pi-briefcase"></i>
+            <span>{{ leave.leave_type?.name }}</span>
+          </div>
+          <span class="leave-badge" :class="`badge-${leave.status}`">
+            {{ getStatusLabel(leave.status) }}
+          </span>
+        </div>
+
+        <h3 class="leave-title">
+          {{ leave.leave_type?.name || 'Solicitação de Licença' }}
+        </h3>
+
+        <p class="leave-description">{{ leave.reason }}</p>
+
+        <div class="leave-footer">
+          <span class="leave-date">
+            <i class="pi pi-calendar"></i>
+            {{ formatDate(leave.start_date) }} até {{ formatDate(leave.end_date) }}
+          </span>
+          <span class="leave-duration">
+            {{ leave.days }} {{ leave.days === 1 ? 'dia' : 'dias' }}
+          </span>
+        </div>
+
+        <div v-if="leave.rejection_reason || leave.approved_by" class="leave-response">
+          <strong>Resposta do RH:</strong>
+          <p v-if="leave.rejection_reason">{{ leave.rejection_reason }}</p>
+          <p v-else-if="leave.approver">Aprovada por {{ leave.approver.name }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal -->
+    <div v-if="showRequestModal" class="modal-overlay" @click="closeRequestModal">
+      <div class="modal-box" @click.stop>
+        <div class="modal-header">
+          <h2>Nova Solicitação de Licença</h2>
+          <button class="btn-close" @click="closeRequestModal">
+            <i class="pi pi-times"></i>
+          </button>
+        </div>
+
+        <form @submit.prevent="submitLeaveRequest" class="modal-body">
+          <div class="form-field">
+            <label>Tipo de Licença *</label>
+            <select v-model="requestForm.leave_type_id" required>
+              <option value="">Selecione o tipo</option>
+              <option v-for="type in leaveTypes" :key="type.id" :value="type.id">
+                {{ type.name }}
+              </option>
+            </select>
           </div>
 
-          <div class="leave-body">
-            <div class="info-row">
-              <div class="info-item">
-                <i class="pi pi-calendar"></i>
-                <span>{{ formatDate(leave.start_date) }} até {{ formatDate(leave.end_date) }}</span>
-              </div>
-              <div class="info-item">
-                <i class="pi pi-clock"></i>
-                <span>{{ leave.days }} {{ leave.days === 1 ? 'dia' : 'dias' }}</span>
-              </div>
+          <div class="form-row">
+            <div class="form-field">
+              <label>Data de Início *</label>
+              <input 
+                v-model="requestForm.start_date" 
+                type="date" 
+                :min="minDate"
+                required 
+              />
             </div>
-
-            <div class="info-row" v-if="leave.reason">
-              <div class="info-item reason">
-                <i class="pi pi-align-left"></i>
-                <span>{{ leave.reason }}</span>
-              </div>
-            </div>
-
-            <!-- Informações de Aprovação/Rejeição -->
-            <div v-if="leave.approved_by && leave.status !== 'pending'" class="review-info">
-              <div class="review-header">
-                <i class="pi" :class="leave.status === 'approved' ? 'pi-check' : 'pi-times'"></i>
-                <span>{{ leave.status === 'approved' ? 'Aprovada' : 'Rejeitada' }} por {{ leave.approver?.name }}</span>
-              </div>
-              <span class="review-date">{{ formatDateTime(leave.approved_at) }}</span>
-              <p v-if="leave.rejection_reason" class="rejection-reason">
-                <strong>Motivo:</strong> {{ leave.rejection_reason }}
-              </p>
+            <div class="form-field">
+              <label>Data de Fim *</label>
+              <input 
+                v-model="requestForm.end_date" 
+                type="date" 
+                :min="requestForm.start_date || minDate"
+                required 
+              />
             </div>
           </div>
 
-          <div v-if="leave.status === 'pending'" class="leave-actions">
-            <button @click="cancelLeave(leave)" class="btn-cancel">
-              <i class="pi pi-times"></i>
-              Cancelar Solicitação
+          <div v-if="calculatedDays > 0" class="info-alert">
+            <i class="pi pi-info-circle"></i>
+            <span>Total de <strong>{{ calculatedDays }}</strong> {{ calculatedDays === 1 ? 'dia' : 'dias' }}</span>
+          </div>
+
+          <div class="form-field">
+            <label>Motivo *</label>
+            <textarea 
+              v-model="requestForm.reason" 
+              rows="4" 
+              placeholder="Descreva o motivo da solicitação..."
+              required
+              minlength="10"
+            ></textarea>
+            <small>Mínimo 10 caracteres</small>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn-cancel" @click="closeRequestModal">
+              Cancelar
+            </button>
+            <button type="submit" class="btn-submit" :disabled="submitting || !canSubmit">
+              <i class="pi pi-spin pi-spinner" v-if="submitting"></i>
+              <i class="pi pi-check" v-else></i>
+              {{ submitting ? 'Enviando...' : 'Enviar Solicitação' }}
             </button>
           </div>
-        </div>
+        </form>
       </div>
-    </Card>
-
-    <!-- Modal de Solicitação -->
-    <Modal v-if="showRequestModal" @close="closeRequestModal">
-      <template #header>
-        <h3>
-          <i class="pi pi-plus-circle"></i>
-          Nova Solicitação de Licença
-        </h3>
-      </template>
-
-      <form @submit.prevent="submitLeaveRequest" class="request-form">
-<div class="form-group">
-  <label>Tipo de Licença *</label>
-  <select v-model="requestForm.leave_type_id" required>
-    <option value="">Selecione o tipo</option>
-    <option 
-      v-for="type in leaveTypes" 
-      :key="type.id" 
-      :value="type.id"
-    >
-      {{ type.name }} ({{ type.default_days }} dias disponíveis)
-    </option>
-  </select>
-  
-  <!-- ✅ MOSTRAR se não houver tipos -->
-  <small v-if="leaveTypes.length === 0" class="text-warning">
-    <i class="pi pi-exclamation-triangle"></i>
-    Nenhum tipo de licença disponível. Entre em contato com o RH.
-  </small>
-</div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label>Data de Início *</label>
-            <input 
-              v-model="requestForm.start_date" 
-              type="date" 
-              :min="minDate"
-              required
-            />
-          </div>
-          <div class="form-group">
-            <label>Data de Fim *</label>
-            <input 
-              v-model="requestForm.end_date" 
-              type="date" 
-              :min="requestForm.start_date || minDate"
-              required
-            />
-          </div>
-        </div>
-
-        <div v-if="calculatedDays > 0" class="info-box">
-          <i class="pi pi-info-circle"></i>
-          <span>Total de <strong>{{ calculatedDays }}</strong> {{ calculatedDays === 1 ? 'dia' : 'dias' }}</span>
-        </div>
-
-        <div class="form-group">
-          <label>Motivo *</label>
-          <textarea 
-            v-model="requestForm.reason" 
-            rows="4" 
-            placeholder="Descreva o motivo da sua solicitação..."
-            required
-            minlength="10"
-          ></textarea>
-          <small class="help-text">Mínimo 10 caracteres</small>
-        </div>
-
-        <div class="modal-actions">
-          <button 
-            type="button" 
-            @click="closeRequestModal" 
-            class="btn-secondary"
-            :disabled="submitting"
-          >
-            Cancelar
-          </button>
-          <button 
-            type="submit" 
-            class="btn-primary"
-            :disabled="submitting || !canSubmit"
-          >
-            <i class="pi" :class="submitting ? 'pi-spin pi-spinner' : 'pi-send'"></i>
-            {{ submitting ? 'Enviando...' : 'Enviar Solicitação' }}
-          </button>
-        </div>
-      </form>
-    </Modal>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import api from '@/services/api'
-import Card from '@/components/common/Card.vue'
-import Modal from '@/components/common/Modal.vue'
 import { useToast } from 'vue-toastification'
 import dayjs from 'dayjs'
 import 'dayjs/locale/pt'
@@ -248,10 +228,11 @@ const loading = ref(false)
 const submitting = ref(false)
 const showRequestModal = ref(false)
 const filterStatus = ref('all')
+const filterType = ref('')
 
 const leaves = ref([])
 const leaveBalance = ref([])
-const leaveTypes = ref([]) // ✅ Declarado
+const leaveTypes = ref([])
 
 const requestForm = ref({
   leave_type_id: '',
@@ -261,11 +242,6 @@ const requestForm = ref({
 })
 
 const minDate = computed(() => dayjs().format('YYYY-MM-DD'))
-
-const selectedLeaveType = computed(() => {
-  if (!requestForm.value.leave_type_id) return null
-  return leaveBalance.value.find(b => b.leave_type_id === requestForm.value.leave_type_id)
-})
 
 const calculatedDays = computed(() => {
   if (!requestForm.value.start_date || !requestForm.value.end_date) return 0
@@ -279,100 +255,78 @@ const canSubmit = computed(() => {
          requestForm.value.start_date &&
          requestForm.value.end_date &&
          requestForm.value.reason.length >= 10 &&
-         calculatedDays.value > 0 &&
-         (!selectedLeaveType.value || calculatedDays.value <= selectedLeaveType.value.available_days)
+         calculatedDays.value > 0
 })
 
 const filteredLeaves = computed(() => {
-  if (filterStatus.value === 'all') return leaves.value
-  return leaves.value.filter(leave => leave.status === filterStatus.value)
+  let filtered = leaves.value
+
+  if (filterStatus.value !== 'all') {
+    filtered = filtered.filter(l => l.status === filterStatus.value)
+  }
+
+  if (filterType.value) {
+    filtered = filtered.filter(l => l.leave_type_id === filterType.value)
+  }
+
+  return filtered
 })
 
-// ✅ ADICIONAR: Buscar licenças
+const getCountByStatus = (status) => {
+  return leaves.value.filter(l => l.status === status).length
+}
+
 const fetchLeaves = async () => {
   loading.value = true
   try {
     const { data } = await api.get('/employee/leaves')
     leaves.value = data
-    console.log('Licenças carregadas:', data)
   } catch (error) {
-    console.error('Erro ao carregar licenças:', error)
     toast.error('Erro ao carregar licenças')
   } finally {
     loading.value = false
   }
 }
 
-// ✅ Buscar tipos de licença
 const fetchLeaveTypes = async () => {
   try {
     const { data } = await api.get('/employee/leaves/types')
     leaveTypes.value = data
-    console.log('✅ Tipos de licença carregados:', data)
   } catch (error) {
-    console.error('❌ Erro ao carregar tipos:', error)
-    // Tentar rota alternativa
     try {
       const { data } = await api.get('/admin/leave-types')
       leaveTypes.value = data.filter(type => type.is_active)
-      console.log('✅ Tipos carregados (rota alternativa):', leaveTypes.value)
     } catch (err) {
-      console.error('❌ Erro na rota alternativa:', err)
       toast.error('Erro ao carregar tipos de licença')
     }
   }
 }
 
-// ✅ Buscar saldo
 const fetchBalance = async () => {
   try {
     const { data } = await api.get('/employee/leaves/balance')
     leaveBalance.value = data
-    console.log('Saldo carregado:', data)
   } catch (error) {
-    console.error('Erro ao carregar saldo:', error)
-    toast.error('Erro ao carregar saldo de licenças')
+    toast.error('Erro ao carregar saldo')
   }
 }
 
-// ✅ Enviar solicitação
 const submitLeaveRequest = async () => {
   if (!canSubmit.value) return
-
   submitting.value = true
   try {
-    console.log('Enviando solicitação:', requestForm.value)
-    
     const { data } = await api.post('/employee/leaves', requestForm.value)
-    toast.success(data.message || 'Solicitação enviada com sucesso!')
+    toast.success(data.message || 'Solicitação enviada!')
     closeRequestModal()
     await fetchLeaves()
     await fetchBalance()
   } catch (error) {
-    console.error('Erro ao enviar:', error.response?.data)
-    const message = error.response?.data?.message || 'Erro ao enviar solicitação'
-    toast.error(message)
+    toast.error(error.response?.data?.message || 'Erro ao enviar')
   } finally {
     submitting.value = false
   }
 }
 
-// ✅ Cancelar licença
-const cancelLeave = async (leave) => {
-  if (!confirm('Tem certeza que deseja cancelar esta solicitação?')) return
-
-  try {
-    await api.post(`/employee/leaves/${leave.id}/cancel`)
-    toast.success('Solicitação cancelada')
-    await fetchLeaves()
-    await fetchBalance()
-  } catch (error) {
-    console.error('Erro ao cancelar:', error)
-    toast.error(error.response?.data?.message || 'Erro ao cancelar')
-  }
-}
-
-// ✅ Fechar modal
 const closeRequestModal = () => {
   showRequestModal.value = false
   requestForm.value = {
@@ -383,641 +337,602 @@ const closeRequestModal = () => {
   }
 }
 
-// ✅ Helpers
 const getStatusLabel = (status) => {
   const labels = {
-    pending: 'Pendente',
-    approved: 'Aprovada',
-    rejected: 'Rejeitada',
-    cancelled: 'Cancelada',
+    pending: 'PENDENTE',
+    approved: 'APROVADO',
+    rejected: 'REJEITADO',
+    cancelled: 'CANCELADO',
   }
   return labels[status] || status
 }
 
-const formatDate = (date) => {
-  return dayjs(date).format('DD/MM/YYYY')
-}
+const formatDate = (date) => dayjs(date).format('DD [de] MMMM [de] YYYY')
 
-const formatDateTime = (datetime) => {
-  return dayjs(datetime).format('DD/MM/YYYY [às] HH:mm')
-}
-
-// ✅ CARREGAR TUDO ao montar
 onMounted(async () => {
-  console.log('=== Montando componente ===')
   await fetchLeaves()
   await fetchBalance()
-  await fetchLeaveTypes() // ✅ ESTAVA FALTANDO!
-  console.log('=== Componente montado ===')
+  await fetchLeaveTypes()
 })
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-
-* {
-  font-family: 'Inter', sans-serif;
-}
-
-.employee-leaves-page {
+.leaves-page {
+  max-width: 1400px;
+  margin: 0 auto;
   padding: 2rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #f8fafc;
   min-height: 100vh;
-  animation: fadeIn 0.5s ease-out;
 }
 
+/* Header */
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2.5rem;
-  padding: 2rem;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 20px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1.5rem;
 }
 
-.page-header h2 {
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.header-icon {
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-icon i {
   font-size: 2rem;
-  font-weight: 800;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  margin-bottom: 0.5rem;
-  letter-spacing: -0.5px;
+  color: #3b82f6;
+}
+
+.header-text h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
 }
 
 .subtitle {
+  font-size: 0.9rem;
   color: #64748b;
-  font-size: 1rem;
-  font-weight: 500;
+  margin: 0.25rem 0 0 0;
 }
 
-.btn-primary {
+.btn-new {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 1rem 2rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: #3b82f6;
   color: white;
   border: none;
-  border-radius: 12px;
-  font-weight: 700;
+  border-radius: 8px;
+  font-weight: 600;
   font-size: 0.95rem;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-  position: relative;
-  overflow: hidden;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
 }
 
-.btn-primary::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-  transition: left 0.5s;
-}
-
-.btn-primary:hover::before {
-  left: 100%;
-}
-
-.btn-primary:hover:not(:disabled) {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
-}
-
-.btn-primary:active {
+.btn-new:hover {
+  background: #2563eb;
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
 }
 
-.btn-primary:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-/* Balance Cards - GLASSMORPHISM */
-.balance-cards {
+/* Stats Grid */
+.stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.25rem;
   margin-bottom: 2rem;
 }
 
-.balance-card {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 20px;
-  padding: 2rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
+.stat-card {
+  background: white;
+  padding: 1.25rem;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border-left: 4px solid;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s;
 }
 
-.balance-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, #667eea, #764ba2, #f093fb);
-  opacity: 0;
-  transition: opacity 0.3s;
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.balance-card:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 12px 40px rgba(102, 126, 234, 0.3);
+.stat-card.yellow {
+  border-left-color: #f59e0b;
 }
 
-.balance-card:hover::before {
-  opacity: 1;
+.stat-card.green {
+  border-left-color: #10b981;
 }
 
-.balance-header h3 {
-  font-size: 1.25rem;
-  font-weight: 700;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  margin-bottom: 1.5rem;
+.stat-card.red {
+  border-left-color: #ef4444;
 }
 
-.balance-stats {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1.5rem;
+.stat-card.blue {
+  border-left-color: #3b82f6;
 }
 
-.stat {
+.stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stat-card.yellow .stat-icon {
+  background: #fef3c7;
+}
+
+.stat-card.yellow .stat-icon i {
+  color: #f59e0b;
+  font-size: 1.5rem;
+}
+
+.stat-card.green .stat-icon {
+  background: #d1fae5;
+}
+
+.stat-card.green .stat-icon i {
+  color: #10b981;
+  font-size: 1.5rem;
+}
+
+.stat-card.red .stat-icon {
+  background: #fee2e2;
+}
+
+.stat-card.red .stat-icon i {
+  color: #ef4444;
+  font-size: 1.5rem;
+}
+
+.stat-card.blue .stat-icon {
+  background: #dbeafe;
+}
+
+.stat-card.blue .stat-icon i {
+  color: #3b82f6;
+  font-size: 1.5rem;
+}
+
+.stat-info {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
 }
 
-.stat .label {
-  font-size: 0.75rem;
-  color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  font-weight: 600;
-}
-
-.stat .value {
-  font-size: 2rem;
-  font-weight: 800;
+.stat-value {
+  font-size: 1.75rem;
+  font-weight: 700;
   color: #1e293b;
   line-height: 1;
 }
 
-.stat .value.success {
-  background: linear-gradient(135deg, #10b981, #059669);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.stat .value.warning {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.stat .value.info {
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+.stat-label {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin-top: 0.25rem;
 }
 
 /* Filters */
-.filters-card {
-  margin-bottom: 2rem;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 16px;
-  padding: 1.5rem;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-}
-
-.filters {
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.filter-btn {
-  padding: 0.75rem 1.5rem;
-  border: 2px solid #e2e8f0;
+.filters-section {
   background: white;
+  padding: 1.5rem;
   border-radius: 12px;
+  margin-bottom: 2rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.filter-item label {
+  display: block;
   font-weight: 600;
   font-size: 0.9rem;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  color: #64748b;
-}
-
-.filter-btn:hover {
-  border-color: #667eea;
-  color: #667eea;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
-}
-
-.filter-btn.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-color: #667eea;
-  color: white;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-}
-
-/* Leaves List */
-.loading-state,
-.empty-state {
-  text-align: center;
-  padding: 4rem 2rem;
-  color: white;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  border-radius: 20px;
-}
-
-.empty-state i {
-  font-size: 4rem;
-  margin-bottom: 1.5rem;
-  opacity: 0.7;
-}
-
-.empty-state h3 {
-  font-size: 1.5rem;
-  font-weight: 700;
+  color: #475569;
   margin-bottom: 0.5rem;
 }
 
+.filter-select {
+  width: 100%;
+  padding: 0.65rem 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  color: #1e293b;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Loading & Empty */
+.loading-state,
+.empty-state {
+  background: white;
+  padding: 4rem 2rem;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.loading-state i,
+.empty-state i {
+  font-size: 3.5rem;
+  color: #cbd5e1;
+  margin-bottom: 1rem;
+}
+
+.empty-state h3 {
+  font-size: 1.25rem;
+  color: #475569;
+  margin: 0 0 0.5rem 0;
+}
+
+.empty-state p {
+  color: #94a3b8;
+  margin: 0;
+}
+
+/* Leaves List */
 .leaves-list {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .leave-card {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 20px;
-  padding: 2rem;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-  position: relative;
-  overflow: hidden;
-}
-
-.leave-card::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 6px;
-  background: linear-gradient(180deg, #667eea, #764ba2);
-  transform: scaleY(0);
-  transition: transform 0.3s;
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  border-left: 4px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s;
 }
 
 .leave-card:hover {
-  transform: translateX(4px);
-  box-shadow: 0 8px 32px rgba(102, 126, 234, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.leave-card:hover::before {
-  transform: scaleY(1);
+.leave-card.border-pending {
+  border-left-color: #f59e0b;
+}
+
+.leave-card.border-approved {
+  border-left-color: #10b981;
+}
+
+.leave-card.border-rejected {
+  border-left-color: #ef4444;
+}
+
+.leave-card.border-cancelled {
+  border-left-color: #94a3b8;
 }
 
 .leave-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.75rem;
 }
 
 .leave-type {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  font-weight: 700;
-  font-size: 1.1rem;
-  color: #1e293b;
-}
-
-.leave-type i {
-  font-size: 1.5rem;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.status-badge {
-  padding: 0.5rem 1rem;
-  border-radius: 100px;
-  font-size: 0.85rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.status-badge.pending {
-  background: linear-gradient(135deg, #fef3c7, #fde68a);
-  color: #92400e;
-  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
-}
-
-.status-badge.approved {
-  background: linear-gradient(135deg, #d1fae5, #a7f3d0);
-  color: #065f46;
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
-}
-
-.status-badge.rejected {
-  background: linear-gradient(135deg, #fee2e2, #fecaca);
-  color: #991b1b;
-  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
-}
-
-.status-badge.cancelled {
-  background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+  gap: 0.5rem;
   color: #64748b;
-  box-shadow: 0 2px 8px rgba(100, 116, 139, 0.2);
-}
-
-.leave-body {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.info-row {
-  display: flex;
-  gap: 2rem;
-  flex-wrap: wrap;
-}
-
-.info-item {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  color: #64748b;
-  font-size: 0.95rem;
-  font-weight: 500;
-}
-
-.info-item.reason {
-  flex: 1;
-  color: #475569;
-  background: #f8fafc;
-  padding: 1rem;
-  border-radius: 12px;
-}
-
-.info-item i {
-  font-size: 1.25rem;
-  color: #94a3b8;
-}
-
-.review-info {
-  margin-top: 1.5rem;
-  padding: 1.5rem;
-  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
-  border-radius: 16px;
-  font-size: 0.95rem;
-  border-left: 4px solid #667eea;
-}
-
-.review-header {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  font-weight: 700;
-  color: #1e293b;
-  margin-bottom: 0.5rem;
-}
-
-.review-header i {
-  font-size: 1.25rem;
-}
-
-.review-date {
-  color: #64748b;
-  font-size: 0.85rem;
-  font-weight: 500;
-}
-
-.rejection-reason {
-  margin-top: 1rem;
-  padding: 1rem;
-  background: linear-gradient(135deg, #fee2e2, #fecaca);
-  border-radius: 12px;
-  color: #991b1b;
   font-size: 0.9rem;
   font-weight: 500;
 }
 
-.leave-actions {
-  margin-top: 1.5rem;
-  padding-top: 1.5rem;
-  border-top: 2px solid #f1f5f9;
+.leave-type i {
+  font-size: 1rem;
 }
 
-.btn-cancel {
+.leave-badge {
+  padding: 0.3rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.badge-pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.badge-approved {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.badge-rejected {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.badge-cancelled {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.leave-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 0.5rem 0;
+}
+
+.leave-description {
+  color: #64748b;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin: 0 0 1rem 0;
+}
+
+.leave-footer {
+  display: flex;
+  gap: 1.5rem;
+  font-size: 0.85rem;
+  color: #94a3b8;
+  flex-wrap: wrap;
+}
+
+.leave-date {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem 1.5rem;
-  background: linear-gradient(135deg, #fee2e2, #fecaca);
-  color: #dc2626;
-  border: none;
-  border-radius: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.2);
+  gap: 0.4rem;
 }
 
-.btn-cancel:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(220, 38, 38, 0.3);
-  background: linear-gradient(135deg, #fecaca, #fca5a5);
+.leave-duration {
+  font-weight: 600;
+  color: #64748b;
 }
 
-/* Form Styles */
-.request-form {
+.leave-response {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  border-left: 3px solid #10b981;
+}
+
+.leave-response strong {
+  display: block;
+  color: #475569;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.leave-response p {
+  color: #64748b;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
-  flex-direction: column;
-  gap: 1.75rem;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.modal-box {
+  background: white;
+  border-radius: 12px;
+  max-width: 550px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.modal-header h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+}
+
+.btn-close {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f1f5f9;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-close:hover {
+  background: #ef4444;
+  color: white;
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.form-field {
+  margin-bottom: 1.25rem;
+}
+
+.form-field label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #475569;
+  margin-bottom: 0.5rem;
+}
+
+.form-field select,
+.form-field input,
+.form-field textarea {
+  width: 100%;
+  padding: 0.65rem 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.form-field select:focus,
+.form-field input:focus,
+.form-field textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-field textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.form-field small {
+  display: block;
+  margin-top: 0.4rem;
+  font-size: 0.8rem;
+  color: #94a3b8;
 }
 
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.form-group label {
-  font-weight: 700;
-  color: #334155;
-  font-size: 0.95rem;
-}
-
-.form-group select,
-.form-group input,
-.form-group textarea {
-  padding: 1rem;
-  border: 2px solid #e2e8f0;
-  border-radius: 12px;
-  font-size: 0.95rem;
-  transition: all 0.3s;
-  font-family: 'Inter', sans-serif;
-}
-
-.form-group select:focus,
-.form-group input:focus,
-.form-group textarea:focus {
-  outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
-}
-
-.help-text {
-  color: #64748b;
-  font-size: 0.85rem;
-  font-weight: 500;
-}
-
-.text-warning {
-  color: #f59e0b;
-  font-weight: 600;
-}
-
-.info-box {
+.info-alert {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 1.25rem;
-  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
-  border-radius: 12px;
+  gap: 0.5rem;
+  padding: 0.875rem;
+  background: #dbeafe;
+  border-radius: 8px;
   color: #1e40af;
-  font-size: 0.95rem;
-  font-weight: 600;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+  font-size: 0.9rem;
+  margin-bottom: 1.25rem;
 }
 
-.info-box i {
-  font-size: 1.5rem;
+.info-alert i {
+  font-size: 1.1rem;
 }
 
-.modal-actions {
+.modal-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 1rem;
-  margin-top: 1.5rem;
+  gap: 0.75rem;
   padding-top: 1.5rem;
-  border-top: 2px solid #f1f5f9;
+  border-top: 1px solid #e2e8f0;
 }
 
-.btn-secondary {
-  padding: 1rem 2rem;
+.btn-cancel,
+.btn-submit {
+  padding: 0.65rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-cancel {
   background: #f1f5f9;
   color: #475569;
-  border: none;
-  border-radius: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.3s;
 }
 
-.btn-secondary:hover:not(:disabled) {
+.btn-cancel:hover {
   background: #e2e8f0;
-  transform: translateY(-2px);
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.btn-submit {
+  background: #3b82f6;
+  color: white;
 }
 
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateX(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+.btn-submit:hover:not(:disabled) {
+  background: #2563eb;
 }
 
-.balance-card {
-  animation: slideIn 0.5s ease-out;
-}
-
-.balance-card:nth-child(1) { animation-delay: 0.1s; }
-.balance-card:nth-child(2) { animation-delay: 0.2s; }
-.balance-card:nth-child(3) { animation-delay: 0.3s; }
-.balance-card:nth-child(4) { animation-delay: 0.4s; }
-
-.leave-card {
-  animation: slideIn 0.5s ease-out;
+.btn-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 @media (max-width: 768px) {
-  .employee-leaves-page {
+  .leaves-page {
     padding: 1rem;
   }
 
   .page-header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 1.5rem;
+  }
+
+  .btn-new {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
   }
 
   .form-row {
     grid-template-columns: 1fr;
-  }
-  
-  .balance-cards {
-    grid-template-columns: 1fr;
-  }
-
-  .info-row {
-    flex-direction: column;
-    gap: 1rem;
   }
 }
 </style>

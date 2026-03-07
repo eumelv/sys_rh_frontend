@@ -1,0 +1,634 @@
+/* =====================================================
+   DARK MODE - CONFIGURAÇÃO GLOBAL COMPLETA
+   ===================================================== */
+
+/* Variables */
+:root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8fafc;
+  --bg-tertiary: #f1f5f9;
+  --bg-page: #f8fafc;
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --text-tertiary: #94a3b8;
+  --border-color: #e2e8f0;
+  --border-hover: #cbd5e1;
+  --shadow-sm: rgba(0, 0, 0, 0.05);
+  --shadow-md: rgba(0, 0, 0, 0.1);
+  --shadow-lg: rgba(0, 0, 0, 0.15);
+}
+
+html.dark-mode {
+  --bg-primary: #1e293b;
+  --bg-secondary: #334155;
+  --bg-tertiary: #475569;
+  --bg-page: #0f172a;
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-tertiary: #94a3b8;
+  --border-color: #334155;
+  --border-hover: #475569;
+  --shadow-sm: rgba(0, 0, 0, 0.3);
+  --shadow-md: rgba(0, 0, 0, 0.4);
+  --shadow-lg: rgba(0, 0, 0, 0.5);
+}
+
+/* =====================================================
+   BASE ELEMENTS
+   ===================================================== */
+
+html.dark-mode,
+html.dark-mode body {
+  background: var(--bg-page) !important;
+  color: var(--text-primary) !important;
+}
+
+html.dark-mode #app {
+  background: var(--bg-page) !important;
+  color: var(--text-primary) !important;
+}
+/* =====================================================
+   HEADER / TOPBAR
+   ===================================================== */
+
+/* Header principal */
+html.dark-mode .header,
+html.dark-mode .topbar,
+html.dark-mode .top-header,
+html.dark-mode .navbar,
+html.dark-mode .app-header {
+  background: #1e293b !important;
+  border-bottom-color: var(--border-color) !important;
+  box-shadow: 0 1px 3px var(--shadow-md) !important;
+}
+
+/* Título da página no header */
+html.dark-mode .header h1,
+html.dark-mode .topbar h1,
+html.dark-mode .page-title {
+  color: var(--text-primary) !important;
+}
+
+/* Breadcrumbs */
+html.dark-mode .breadcrumb,
+html.dark-mode .breadcrumb-item {
+  color: var(--text-secondary) !important;
+}
+
+html.dark-mode .breadcrumb-item.active {
+  color: var(--text-primary) !important;
+}
+
+/* User menu no header */
+html.dark-mode .user-menu,
+html.dark-mode .user-info,
+html.dark-mode .user-profile {
+  color: var(--text-primary) !important;
+}
+
+html.dark-mode .user-name {
+  color: var(--text-primary) !important;
+}
+
+html.dark-mode .user-role {
+  color: var(--text-secondary) !important;
+}
+
+/* Avatar no header */
+html.dark-mode .user-avatar {
+  border-color: var(--border-color) !important;
+  background: var(--bg-secondary) !important;
+}
+
+/* Dropdown menu */
+html.dark-mode .dropdown-menu,
+html.dark-mode .user-dropdown {
+  background: var(--bg-primary) !important;
+  border-color: var(--border-color) !important;
+  box-shadow: 0 4px 12px var(--shadow-lg) !important;
+}
+
+html.dark-mode .dropdown-item {
+  color: var(--text-primary) !important;
+}
+
+html.dark-mode .dropdown-item:hover {
+  background: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+}
+
+html.dark-mode .dropdown-divider {
+  border-color: var(--border-color) !important;
+}
+
+/* Notifications */
+html.dark-mode .notifications-button,
+html.dark-mode .notification-icon {
+  color: var(--text-secondary) !important;
+}
+
+html.dark-mode .notifications-button:hover {
+  background: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+}
+
+html.dark-mode .notification-badge {
+  background: #ef4444 !important;
+  color: white !important;
+}
+
+html.dark-mode .notifications-dropdown {
+  background: var(--bg-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+html.dark-mode .notification-item {
+  border-bottom-color: var(--border-color) !important;
+}
+
+html.dark-mode .notification-item:hover {
+  background: var(--bg-secondary) !important;
+}
+
+/* Search bar no header */
+html.dark-mode .search-bar,
+html.dark-mode .header-search {
+  background: var(--bg-secondary) !important;
+  border-color: var(--border-color) !important;
+}
+
+html.dark-mode .search-bar input {
+  background: transparent !important;
+  color: var(--text-primary) !important;
+}
+
+html.dark-mode .search-bar input::placeholder {
+  color: var(--text-tertiary) !important;
+}
+
+/* Ícones no header */
+html.dark-mode .header-icon,
+html.dark-mode .topbar-icon {
+  color: var(--text-secondary) !important;
+}
+
+html.dark-mode .header-icon:hover,
+html.dark-mode .topbar-icon:hover {
+  color: var(--text-primary) !important;
+  background: var(--bg-secondary) !important;
+}
+
+/* Logo no header */
+html.dark-mode .logo-text,
+html.dark-mode .app-logo-text {
+  color: var(--text-primary) !important;
+}
+
+/* Mobile menu toggle */
+html.dark-mode .menu-toggle,
+html.dark-mode .hamburger-menu {
+  color: var(--text-primary) !important;
+}
+
+html.dark-mode .menu-toggle:hover {
+  background: var(--bg-secondary) !important;
+}
+
+/* =====================================================
+   LAYOUT PRINCIPAL
+   ===================================================== */
+
+/* Sidebar */
+html.dark-mode .sidebar,
+html.dark-mode .employee-sidebar,
+html.dark-mode .admin-sidebar {
+  background: #1e293b !important;
+  border-right-color: var(--border-color) !important;
+}
+
+html.dark-mode .sidebar-header {
+  border-bottom-color: var(--border-color) !important;
+}
+
+html.dark-mode .nav-item,
+html.dark-mode .sidebar-nav a {
+  color: var(--text-secondary) !important;
+}
+
+html.dark-mode .nav-item:hover,
+html.dark-mode .sidebar-nav a:hover {
+  background: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+}
+
+html.dark-mode .nav-item.active,
+html.dark-mode .sidebar-nav a.active,
+html.dark-mode .sidebar-nav a.router-link-active {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+  color: white !important;
+}
+
+/* Main Content Area */
+html.dark-mode .main-content,
+html.dark-mode .employee-layout,
+html.dark-mode .admin-layout {
+  background: var(--bg-page) !important;
+}
+
+/* =====================================================
+   PÁGINAS ESPECÍFICAS
+   ===================================================== */
+
+html.dark-mode .settings-page,
+html.dark-mode .profile-page,
+html.dark-mode .leaves-page,
+html.dark-mode .requests-page,
+html.dark-mode .dashboard-page,
+html.dark-mode .documents-page,
+html.dark-mode .communications-page,
+html.dark-mode .attendance-page {
+  background: var(--bg-page) !important;
+}
+
+/* =====================================================
+   CARDS E CONTAINERS
+   ===================================================== */
+
+html.dark-mode .settings-content,
+html.dark-mode .settings-sidebar,
+html.dark-mode .info-card,
+html.dark-mode .stat-card,
+html.dark-mode .filters-card,
+html.dark-mode .leave-card,
+html.dark-mode .request-card,
+html.dark-mode .balance-card,
+html.dark-mode .card,
+html.dark-mode .content-card {
+  background: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+  box-shadow: 0 1px 3px var(--shadow-sm) !important;
+}
+
+html.dark-mode .notification-item,
+html.dark-mode .preference-item,
+html.dark-mode .info-item-card {
+  background: var(--bg-secondary) !important;
+  border-color: var(--border-color) !important;
+}
+
+html.dark-mode .info-card.readonly,
+html.dark-mode .readonly-section {
+  background: var(--bg-secondary) !important;
+}
+
+/* =====================================================
+   HEADER E BANNER
+   ===================================================== */
+
+html.dark-mode .page-header {
+  background: transparent !important;
+}
+
+html.dark-mode .header-content {
+  background: var(--bg-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+html.dark-mode .profile-banner {
+  background: linear-gradient(135deg, #1e3a8a 0%, #6d28d9 100%) !important;
+}
+
+html.dark-mode .header-title > i {
+  background: var(--bg-secondary) !important;
+}
+
+/* =====================================================
+   FORMULÁRIOS
+   ===================================================== */
+
+html.dark-mode input,
+html.dark-mode select,
+html.dark-mode textarea,
+html.dark-mode .form-control,
+html.dark-mode .filter-select,
+html.dark-mode .preference-select {
+  background: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+html.dark-mode input:focus,
+html.dark-mode select:focus,
+html.dark-mode textarea:focus,
+html.dark-mode .form-control:focus {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2) !important;
+}
+
+html.dark-mode input:disabled,
+html.dark-mode select:disabled,
+html.dark-mode textarea:disabled {
+  background: var(--bg-tertiary) !important;
+  color: var(--text-tertiary) !important;
+}
+
+html.dark-mode input::placeholder,
+html.dark-mode textarea::placeholder {
+  color: var(--text-tertiary) !important;
+}
+
+/* =====================================================
+   TEXTO E TIPOGRAFIA
+   ===================================================== */
+
+html.dark-mode h1,
+html.dark-mode h2,
+html.dark-mode h3,
+html.dark-mode h4,
+html.dark-mode h5,
+html.dark-mode h6,
+html.dark-mode strong,
+html.dark-mode .card-title h2,
+html.dark-mode .section-header h2 {
+  color: var(--text-primary) !important;
+}
+
+html.dark-mode p,
+html.dark-mode span:not(.status-badge):not(.badge-pending):not(.badge-approved):not(.badge-rejected),
+html.dark-mode label,
+html.dark-mode .info-label {
+  color: var(--text-secondary) !important;
+}
+
+html.dark-mode .subtitle,
+html.dark-mode .form-text,
+html.dark-mode small,
+html.dark-mode .help-text {
+  color: var(--text-tertiary) !important;
+}
+
+/* =====================================================
+   BOTÕES
+   ===================================================== */
+
+html.dark-mode .btn-secondary,
+html.dark-mode .btn-cancel {
+  background: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+html.dark-mode .btn-secondary:hover:not(:disabled),
+html.dark-mode .btn-cancel:hover:not(:disabled) {
+  background: var(--bg-tertiary) !important;
+}
+
+html.dark-mode .settings-nav-item:not(.active):hover {
+  background: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+}
+
+html.dark-mode .btn-edit-small {
+  background: #3b82f6 !important;
+  color: white !important;
+}
+
+/* =====================================================
+   BADGES E STATUS
+   ===================================================== */
+
+html.dark-mode .readonly-badge {
+  background: var(--bg-tertiary) !important;
+  color: var(--text-tertiary) !important;
+}
+
+html.dark-mode .edit-badge {
+  background: rgba(59, 130, 246, 0.2) !important;
+  color: #60a5fa !important;
+}
+
+/* Manter cores originais dos status badges */
+html.dark-mode .status-badge.active,
+html.dark-mode .badge-approved,
+html.dark-mode .badge-aprovado {
+  background: #065f46 !important;
+  color: #d1fae5 !important;
+}
+
+html.dark-mode .status-badge.inactive,
+html.dark-mode .badge-rejected,
+html.dark-mode .badge-rejeitado {
+  background: #991b1b !important;
+  color: #fecaca !important;
+}
+
+html.dark-mode .badge-pending,
+html.dark-mode .badge-pendente {
+  background: #92400e !important;
+  color: #fef3c7 !important;
+}
+
+html.dark-mode .badge-em_analise {
+  background: #1e40af !important;
+  color: #dbeafe !important;
+}
+
+/* =====================================================
+   BORDAS E DIVISORES
+   ===================================================== */
+
+html.dark-mode .section-header,
+html.dark-mode .card-header,
+html.dark-mode .form-actions {
+  border-bottom-color: var(--border-color) !important;
+  border-top-color: var(--border-color) !important;
+}
+
+html.dark-mode .card-body {
+  border-top-color: var(--border-color) !important;
+}
+
+/* =====================================================
+   MODAL
+   ===================================================== */
+
+html.dark-mode .modal-overlay {
+  background: rgba(0, 0, 0, 0.7) !important;
+}
+
+html.dark-mode .modal-content,
+html.dark-mode .modal-box {
+  background: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+}
+
+html.dark-mode .modal-header {
+  border-bottom-color: var(--border-color) !important;
+}
+
+html.dark-mode .modal-footer {
+  border-top-color: var(--border-color) !important;
+}
+
+/* =====================================================
+   OUTROS ELEMENTOS
+   ===================================================== */
+
+html.dark-mode .password-toggle:hover,
+html.dark-mode .btn-close:not(:hover) {
+  background: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+}
+
+html.dark-mode .info-box {
+  background: rgba(59, 130, 246, 0.15) !important;
+  color: #60a5fa !important;
+}
+
+html.dark-mode .request-response,
+html.dark-mode .leave-response {
+  background: var(--bg-secondary) !important;
+  border-left-color: #3b82f6 !important;
+}
+
+html.dark-mode .alert-error {
+  background: rgba(239, 68, 68, 0.2) !important;
+  border-color: #dc2626 !important;
+  color: #fca5a5 !important;
+}
+
+html.dark-mode .loading-state,
+html.dark-mode .empty-state {
+  background: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+}
+
+html.dark-mode .empty-state i {
+  color: var(--text-tertiary) !important;
+}
+
+/* =====================================================
+   FILTROS E SELECTS
+   ===================================================== */
+
+html.dark-mode .filter-btn {
+  background: var(--bg-secondary) !important;
+  color: var(--text-secondary) !important;
+  border-color: var(--border-color) !important;
+}
+
+html.dark-mode .filter-btn:hover {
+  border-color: #3b82f6 !important;
+  color: #60a5fa !important;
+}
+
+html.dark-mode .filter-btn.active {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+  color: white !important;
+}
+
+/* =====================================================
+   SCROLLBAR (OPCIONAL)
+   ===================================================== */
+
+html.dark-mode ::-webkit-scrollbar {
+  width: 12px;
+}
+
+html.dark-mode ::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+html.dark-mode ::-webkit-scrollbar-thumb {
+  background: var(--bg-tertiary);
+  border-radius: 6px;
+}
+
+html.dark-mode ::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* =====================================================
+   ANIMAÇÕES E TRANSIÇÕES
+   ===================================================== */
+
+html,
+html *:not(.pi):not(i):not(svg):not(path) {
+  transition: background-color 0.2s ease, 
+              color 0.2s ease, 
+              border-color 0.2s ease,
+              box-shadow 0.2s ease !important;
+}
+
+/* =====================================================
+   CORREÇÕES ESPECÍFICAS
+   ===================================================== */
+
+/* Avatar placeholder */
+html.dark-mode .avatar-placeholder {
+  background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+}
+
+/* Info grid values */
+html.dark-mode .info-value {
+  color: var(--text-primary) !important;
+}
+
+/* File items */
+html.dark-mode .file-item {
+  background: var(--bg-secondary) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* Review info */
+html.dark-mode .review-info {
+  background: var(--bg-secondary) !important;
+}
+
+/* Rejection reason */
+html.dark-mode .rejection-reason {
+  background: rgba(239, 68, 68, 0.15) !important;
+  color: #fca5a5 !important;
+}
+
+/* Notification category titles */
+html.dark-mode .notification-category h3,
+html.dark-mode .preference-item strong,
+html.dark-mode .notification-item strong {
+  color: var(--text-primary) !important;
+}
+
+/* Stats grid icons */
+html.dark-mode .stat-icon {
+  background: var(--bg-secondary) !important;
+}
+
+/* Preserve gradient buttons */
+html.dark-mode .btn-primary,
+html.dark-mode .btn-save,
+html.dark-mode .btn-new-request,
+html.dark-mode .btn-new {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+  color: white !important;
+}
+
+/* Tables (if any) */
+html.dark-mode table {
+  background: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+}
+
+html.dark-mode th {
+  background: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+html.dark-mode td {
+  border-color: var(--border-color) !important;
+}
+
+html.dark-mode tr:hover {
+  background: var(--bg-secondary) !important;
+}
