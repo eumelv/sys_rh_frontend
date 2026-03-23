@@ -12,52 +12,77 @@
         </button>
       </div>
 
-      <nav class="sidebar-nav">
-        <router-link to="/admin/dashboard" class="nav-item">
-          <i class="pi pi-home"></i>
-          <span v-if="!isCollapsed">Dashboard</span>
-        </router-link>
-        <router-link to="/admin/employees" class="nav-item">
-          <i class="pi pi-users"></i>
-          <span v-if="!isCollapsed">Funcionários</span>
-        </router-link>
-        <router-link to="/admin/departments" class="nav-item">
-          <i class="pi pi-sitemap"></i>
-          <span v-if="!isCollapsed">Departamentos</span>
-        </router-link>
-        <router-link to="/admin/positions" class="nav-item">
-          <i class="pi pi-briefcase"></i>
-          <span v-if="!isCollapsed">Cargos</span>
-        </router-link>
-        <router-link to="/admin/users" class="nav-item">
-          <i class="pi pi-user-plus"></i>
-          <span v-if="!isCollapsed">Utilizadores</span>
-        </router-link>
-        <router-link to="/admin/payroll" class="nav-item">
-          <i class="pi pi-money-bill"></i>
-          <span v-if="!isCollapsed">Folha Salarial</span>
-        </router-link>
-        <router-link to="/admin/recruitment" class="nav-item">
-          <i class="pi pi-search-plus"></i>
-          <span v-if="!isCollapsed">Recrutamento</span>
-        </router-link>
-        <router-link to="/admin/leaves" class="nav-item">
-          <i class="pi pi-calendar"></i>
-          <span v-if="!isCollapsed">Licenças</span>
-        </router-link>
-        <router-link to="/admin/attendance" class="nav-item">
-          <i class="pi pi-clock"></i>
-          <span v-if="!isCollapsed">Presenças</span>
-        </router-link>
-        <router-link to="/admin/work-schedules" class="nav-item">
-          <i class="pi pi-calendar-clock"></i>
-          <span v-if="!isCollapsed">Horários</span>
-        </router-link>
-        <router-link to="/admin/settings" class="nav-item">
-          <i class="pi pi-cog"></i>
-          <span v-if="!isCollapsed">Configurações</span>
-        </router-link>
-      </nav>
+<nav class="sidebar-nav">
+  <router-link to="/admin/dashboard" class="nav-item">
+    <i class="pi pi-home"></i>
+    <span v-if="!isCollapsed">Dashboard</span>
+  </router-link>
+  
+  <router-link to="/admin/employees" class="nav-item">
+    <i class="pi pi-users"></i>
+    <span v-if="!isCollapsed">Funcionários</span>
+  </router-link>
+  
+  <router-link to="/admin/departments" class="nav-item">
+    <i class="pi pi-sitemap"></i>
+    <span v-if="!isCollapsed">Departamentos</span>
+  </router-link>
+  
+  <router-link to="/admin/positions" class="nav-item">
+    <i class="pi pi-briefcase"></i>
+    <span v-if="!isCollapsed">Cargos</span>
+  </router-link>
+
+  <router-link to="/admin/requests" class="nav-item">
+    <i class="pi pi-inbox"></i>
+    <span v-if="!isCollapsed">Solicitações</span>
+  </router-link>
+  
+  <router-link to="/admin/leaves" class="nav-item">
+    <i class="pi pi-calendar"></i>
+    <span v-if="!isCollapsed">Licenças</span>
+  </router-link>
+
+  <router-link to="/admin/announcements" class="nav-item">
+    <i class="pi pi-megaphone"></i>
+    <span v-if="!isCollapsed">Comunicados</span>
+  </router-link>
+
+  <router-link to="/admin/documents" class="nav-item">
+    <i class="pi pi-file"></i>
+    <span v-if="!isCollapsed">Documentos</span>
+  </router-link>
+  
+  <router-link to="/admin/users" class="nav-item">
+    <i class="pi pi-user-plus"></i>
+    <span v-if="!isCollapsed">Utilizadores</span>
+  </router-link>
+  
+  <router-link to="/admin/payroll" class="nav-item">
+    <i class="pi pi-money-bill"></i>
+    <span v-if="!isCollapsed">Folha Salarial</span>
+  </router-link>
+  
+  <router-link to="/admin/recruitment" class="nav-item">
+    <i class="pi pi-search-plus"></i>
+    <span v-if="!isCollapsed">Recrutamento</span>
+  </router-link>
+  
+  <router-link to="/admin/attendance" class="nav-item">
+    <i class="pi pi-clock"></i>
+    <span v-if="!isCollapsed">Presenças</span>
+  </router-link>
+  
+  <router-link to="/admin/work-schedules" class="nav-item">
+    <i class="pi pi-calendar-clock"></i>
+    <span v-if="!isCollapsed">Horários</span>
+  </router-link>
+  
+  <router-link to="/admin/settings" class="nav-item">
+    <i class="pi pi-cog"></i>
+    <span v-if="!isCollapsed">Configurações</span>
+  </router-link>
+</nav>
 
       <div class="sidebar-footer">
         <button class="nav-item logout-btn" @click="logout">
@@ -124,6 +149,11 @@ const currentPageTitle = computed(() => {
     'EmployeeDetail': 'Detalhes do Funcionário',
     'Departments': 'Departamentos',
     'Positions': 'Cargos',
+    'AdminRequests': 'Solicitações dos Colaboradores',
+    'AdminLeaves': 'Gestão de Licenças e Férias',
+    'AdminLeaveTypes': 'Tipos de Licença',
+    'AdminAnnouncements': 'Comunicados',
+    'AdminDocuments': 'Documentos',
     'Users': 'Gestão de Utilizadores',
     'Payroll': 'Processamento Salarial',
     'Recruitment': 'Recrutamento & Seleção',
@@ -134,7 +164,6 @@ const currentPageTitle = computed(() => {
   }
   return titles[route.name] || 'HR System'
 })
-
 const getRoleLabel = computed(() => {
   if (authStore.isSuperAdmin) return 'Super Admin'
   if (authStore.isAdmin) return 'Administrador'
@@ -166,6 +195,32 @@ const logout = async () => {
   position: sticky;
   top: 0;
   height: 100vh;
+}.sidebar-nav {
+  flex: 1;
+  padding: 1rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  overflow-y: auto; /* ✅ ADICIONAR SCROLL */
+  overflow-x: hidden;
+}
+
+/* ✅ ESTILIZAR SCROLLBAR */
+.sidebar-nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-nav::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
 }
 
 .sidebar.collapsed {

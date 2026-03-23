@@ -85,42 +85,37 @@ const form = reactive({
 })
 
 const handleLogin = async () => {
+  if (!form.email || !form.password) {
+    toast.error('Preencha todos os campos')
+    return
+  }
+
   loading.value = true
-  
+
   try {
-    const response = await authStore.login({
+    await authStore.login({
       email: form.email,
-      password: form.password,
+      password: form.password
     })
 
-    console.log('=== LOGIN DEBUG ===')
-    console.log('Email:', form.email)
-    console.log('is_employee:', response.is_employee)
-    console.log('employee:', response.employee)
+    console.log('✅ LOGIN OK')
+    console.log('🔍 isAdmin:', authStore.isAdmin)
+    console.log('🔍 isEmployee:', authStore.isEmployee)
+    console.log('🔍 User roles:', authStore.user?.roles)
 
-    toast.success('Login realizado com sucesso!')
+    toast.success('Login realizado!')
 
-    // ✅ AGUARDAR UM POUCO ANTES DE REDIRECIONAR
-    await new Promise(resolve => setTimeout(resolve, 100))
-
-    // ✅ REDIRECIONAR COM REPLACE (evita voltar)
-    if (response.is_employee) {
-      console.log('→ Employee: redirecionando para /employee/dashboard')
-      await router.replace('/employee/dashboard')
-    } else if (authStore.isSuperAdmin) {
-      console.log('→ Super Admin: redirecionando para /super-admin/dashboard')
-      await router.replace('/super-admin/dashboard')
-    } else {
-      console.log('→ Admin: redirecionando para /admin/dashboard')
-      await router.replace('/admin/dashboard')
+    // ✅ REDIRECIONAR
+    if (authStore.isSuperAdmin) {
+      router.push('/super-admin/dashboard')
+    } else if (authStore.isAdmin) {
+      router.push('/admin/dashboard')
+    } else if (authStore.isEmployee) {
+      router.push('/employee/dashboard')
     }
-
-    // ✅ RECARREGAR A PÁGINA PARA GARANTIR
-    window.location.href = response.is_employee ? '/employee/dashboard' : '/admin/dashboard'
-
-  } catch (error) {
-    const message = error.response?.data?.message || 'Erro ao fazer login'
-    toast.error(message)
+  } catch (err) {
+    console.error('❌ LOGIN ERROR:', err)
+    toast.error(err.response?.data?.message || 'Erro ao fazer login')
   } finally {
     loading.value = false
   }

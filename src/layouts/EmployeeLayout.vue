@@ -29,7 +29,11 @@
           <i class="pi pi-calendar"></i>
           <span v-if="!isCollapsed">Férias & Licenças</span>
         </router-link>
-        
+  
+      <router-link to="/employee/financial" class="nav-item">
+        <i class="pi pi-wallet"></i>
+        <span v-if="!isCollapsed">Financeiro</span>
+  </router-link>
         <!-- Novos itens adicionados -->
         <router-link to="/employee/documents" class="nav-item">
           <i class="pi pi-file"></i>
@@ -45,7 +49,7 @@
         </router-link>
         <router-link to="/employee/settings" class="nav-item">
           <i class="pi pi-cog"></i>
-          <span v-if="!isCollapsed">Definições</span>
+          <span v-if="!isCollapsed">Configurações</span>
         </router-link>
       </nav>
 
@@ -106,6 +110,7 @@ const currentPageTitle = computed(() => {
     'EmployeeProfile': 'Meu Perfil',
     'EmployeeAttendance': 'Registo de Presenças',
     'EmployeeLeaves': 'Minhas Férias & Licenças',
+     'EmployeeFinancial': 'Meus Holerites',
     'EmployeeDocuments': 'Meus Documentos',
     'EmployeeRequests': 'Solicitações',
     'EmployeeAnnouncements': 'Comunicados',

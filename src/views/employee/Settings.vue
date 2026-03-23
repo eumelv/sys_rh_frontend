@@ -285,9 +285,11 @@ import { ref, reactive, onMounted } from 'vue'
 import api from '@/services/api'
 import { useToast } from 'vue-toastification'
 import { useI18n } from 'vue-i18n'
+import { useTheme } from '@/composables/useTheme'
 const toast = useToast()
 const { t, locale } = useI18n() 
 const loading = ref(true)
+const { setTheme } = useTheme()
 const activeSection = ref('security')
 const savingSecurity = ref(false)
 const savingNotifications = ref(false)
@@ -328,7 +330,13 @@ const loadSettings = async () => {
     const { data } = await api.get('/employee/settings')
     
     Object.assign(settings, data.settings)
+    // Aplicar tema carregado
+    setTheme(settings.theme)
     
+    // Aplicar idioma
+    if (settings.language) {
+      locale.value = settings.language
+    }
     // Aplicar tema carregado
     applyTheme()
     
@@ -391,10 +399,10 @@ const saveNotifications = async () => {
     })
     
     toast.success(data.message)
-       // ✅ Aplicar idioma
+       // Aplicar idioma
     locale.value = settings.language
     
-    // ✅ Aplicar tema
+    // Aplicar tema
     applyTheme()
   } catch (error) {
     console.error('Erro ao salvar:', error)
@@ -415,6 +423,11 @@ const savePreferences = async () => {
     })
     
     toast.success(data.message)
+        // Aplicar idioma
+    locale.value = settings.language
+    
+    // Aplicar tema GLOBALMENTE
+    setTheme(settings.theme)
     
     // Aplicar tema após salvar
     applyTheme()
@@ -433,33 +446,28 @@ const applyTheme = () => {
   if (settings.theme === 'dark') {
     html.classList.add('dark-mode')
     html.classList.remove('light-mode')
-    localStorage.setItem('app-theme', 'dark') // ✅ SALVAR
+    localStorage.setItem('app-theme', 'dark') 
   } else if (settings.theme === 'light') {
     html.classList.add('light-mode')
     html.classList.remove('dark-mode')
-    localStorage.setItem('app-theme', 'light') // ✅ SALVAR
+    localStorage.setItem('app-theme', 'light') 
   } else {
     // Auto
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
     if (prefersDark) {
       html.classList.add('dark-mode')
       html.classList.remove('light-mode')
-      localStorage.setItem('app-theme', 'dark') // ✅ SALVAR
+      localStorage.setItem('app-theme', 'dark') 
     } else {
       html.classList.add('light-mode')
       html.classList.remove('dark-mode')
-      localStorage.setItem('app-theme', 'light') // ✅ SALVAR
+      localStorage.setItem('app-theme', 'light') 
     }
   }
 }
 
 onMounted(async () => {
   await loadSettings()
-  
-  // ✅ Aplicar idioma salvo
-  if (settings.language) {
-    locale.value = settings.language
-  }
 })
 </script>
 

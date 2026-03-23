@@ -2,7 +2,6 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 const routes = [
-  // Public routes
   {
     path: '/',
     redirect: '/login',
@@ -25,8 +24,6 @@ const routes = [
     component: () => import('@/views/public/CareersPortal.vue'),
     meta: { requiresAuth: false, layout: 'blank' },
   },
-
-  // Super Admin routes
   {
     path: '/super-admin',
     component: () => import('@/layouts/SuperAdminLayout.vue'),
@@ -53,8 +50,6 @@ const routes = [
       },
     ],
   },
-
-  // Admin routes
   {
     path: '/admin',
     component: () => import('@/layouts/AdminLayout.vue'),
@@ -95,6 +90,16 @@ const routes = [
         component: () => import('@/views/admin/Users.vue'),
       },
       {
+        path: 'announcements',
+        name: 'AdminAnnouncements',
+        component: () => import('@/views/admin/Announcements.vue'),
+      },
+      {
+        path: 'documents',
+        name: 'AdminDocuments',
+        component: () => import('@/views/admin/Documents.vue'),
+      },
+      {
         path: 'settings',
         name: 'Settings',
         component: () => import('@/views/admin/Settings.vue'),
@@ -114,11 +119,10 @@ const routes = [
         name: 'Leaves',
         component: () => import('@/views/admin/Leaves.vue'),
       },
-        {
+      {
         path: 'leave-types',
         name: 'AdminLeaveTypes',
         component: () => import('@/views/admin/LeaveTypes.vue'),
-        meta: { title: 'Tipos de Licença' }
       },
       {
         path: 'attendance',
@@ -130,10 +134,13 @@ const routes = [
         name: 'WorkSchedules',
         component: () => import('@/views/admin/WorkSchedules.vue'),
       },
+      {
+        path: 'requests',
+        name: 'AdminRequests',
+        component: () => import('@/views/admin/Requests.vue'),
+      },
     ],
   },
-
-  // Employee routes
   {
     path: '/employee',
     component: () => import('@/layouts/EmployeeLayout.vue'),
@@ -163,7 +170,11 @@ const routes = [
         name: 'EmployeeLeaves',
         component: () => import('@/views/employee/Leaves.vue'),
       },
-      // ✅ NOVAS ROTAS ADICIONADAS AQUI
+       {
+      path: 'financial',
+      name: 'EmployeeFinancial',
+      component: () => import('@/views/employee/Financial.vue'),
+    },
       {
         path: 'documents',
         name: 'EmployeeDocuments',
@@ -184,16 +195,13 @@ const routes = [
         name: 'EmployeeFinancial',
         component: () => import('@/views/employee/Financial.vue'),
       },
-  {
-      path: 'settings',
-      name: 'EmployeeSettings',
-      component: () => import('@/views/employee/Settings.vue'),
-      meta: { title: 'Definições' }
-    },
+      {
+        path: 'settings',
+        name: 'EmployeeSettings',
+        component: () => import('@/views/employee/Settings.vue'),
+      },
     ],
   },
-
-  // 404
   {
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
@@ -206,53 +214,40 @@ const router = createRouter({
   history: createWebHistory(),
   routes,
 })
-// Navigation guards
+
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
 
-  // Se não está autenticado e a rota requer auth
+  console.log('🔍 ROUTER:', to.path)
+  console.log('🔍 isAuthenticated:', authStore.isAuthenticated)
+
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    next('/login')
-    return
+    console.log('❌ Redirect login')
+    return next('/login')
   }
 
-  // ✅ REDIRECIONAR usuários autenticados que tentam acessar login/register
   if ((to.path === '/login' || to.path === '/register') && authStore.isAuthenticated) {
-    // ✅ USAR is_employee ao invés de roles
-    if (authStore.isEmployee) {
-      next('/employee/dashboard')
-    } else if (authStore.isSuperAdmin) {
-      next('/super-admin/dashboard')
-    } else {
-      next('/admin/dashboard')
+    console.log('✅ Redirect dashboard')
+    
+    if (authStore.isSuperAdmin) {
+      return next('/super-admin/dashboard')
+    } else if (authStore.isAdmin) {
+      return next('/admin/dashboard')
+    } else if (authStore.isEmployee) {
+      return next('/employee/dashboard')
     }
-    return
   }
 
-  // ✅ Check super admin
   if (to.meta.requiresSuperAdmin && !authStore.isSuperAdmin) {
-    next('/admin/dashboard')
-    return
+    return next('/admin/dashboard')
   }
 
-  // ✅ Check admin - USAR is_employee NEGADO
-  if (to.meta.requiresAdmin && authStore.isEmployee) {
-    next('/employee/dashboard')
-    return
+  if (to.meta.requiresAdmin && !authStore.isAdmin) {
+    return next('/employee/dashboard')
   }
 
-  // Check employee - rotas employee só para quem TEM employee
   if (to.path.startsWith('/employee') && !authStore.isEmployee) {
-    next('/admin/dashboard')
-    return
-  }
-
-  // Check feature access
-  if (to.meta.requiresFeature) {
-    if (!authStore.hasFeature(to.meta.requiresFeature)) {
-      next('/admin/dashboard')
-      return
-    }
+    return next('/admin/dashboard')
   }
 
   next()
