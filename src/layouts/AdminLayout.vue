@@ -67,12 +67,30 @@
     <i class="pi pi-search-plus"></i>
     <span v-if="!isCollapsed">Recrutamento</span>
   </router-link>
-  
-  <router-link to="/admin/attendance" class="nav-item">
-    <i class="pi pi-clock"></i>
-    <span v-if="!isCollapsed">Presenças</span>
-  </router-link>
-  
+
+  <!-- ✅ MODIFICAR ESTA SEÇÃO - Adicionar submenu -->
+  <div class="nav-group">
+    <div class="nav-item-parent" @click="toggleSubmenu('attendance')">
+      <div class="nav-item-content">
+        <i class="pi pi-clock"></i>
+        <span v-if="!isCollapsed">Presenças</span>
+      </div>
+      <i v-if="!isCollapsed" class="pi pi-chevron-down submenu-icon" :class="{ rotated: openSubmenus.attendance }"></i>
+    </div>
+    
+    <div v-if="openSubmenus.attendance" class="submenu">
+      <router-link to="/admin/attendance" class="nav-item submenu-item">
+        <i class="pi pi-list"></i>
+        <span v-if="!isCollapsed">Registros</span>
+      </router-link>
+      <router-link to="/admin/attendance/justifications" class="nav-item submenu-item">
+        <i class="pi pi-file-check"></i>
+        <span v-if="!isCollapsed">Justificativas</span>
+        <span v-if="pendingJustifications > 0 && !isCollapsed" class="badge">{{ pendingJustifications }}</span>
+      </router-link>
+    </div>
+  </div>
+
   <router-link to="/admin/work-schedules" class="nav-item">
     <i class="pi pi-calendar-clock"></i>
     <span v-if="!isCollapsed">Horários</span>
@@ -135,13 +153,38 @@
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { adminService } from '@/services/adminService'
 
 const authStore = useAuthStore()
 const router = useRouter()
 const route = useRoute()
 
-const isCollapsed = ref(false)
 
+const isCollapsed = ref(false)
+const openSubmenus = ref({
+  attendance: false
+})
+const pendingJustifications = ref(0)
+
+// Toggle sidebar
+const toggleSidebar = () => {
+  isCollapsed.value = !isCollapsed.value
+}
+
+// Toggle submenu
+const toggleSubmenu = (menu) => {
+  openSubmenus.value[menu] = !openSubmenus.value[menu]
+}
+
+// Carregar contagem de justificativas pendentes
+const loadPendingJustifications = async () => {
+  try {
+    const { data } = await adminService.attendanceJustifications.getStats()
+    pendingJustifications.value = data.pending || 0
+  } catch (error) {
+    console.error('Erro ao carregar justificativas pendentes:', error)
+  }
+}
 const currentPageTitle = computed(() => {
   const titles = {
     'AdminDashboard': 'Dashboard',
@@ -159,6 +202,7 @@ const currentPageTitle = computed(() => {
     'Recruitment': 'Recrutamento & Seleção',
     'Leaves': 'Gestão de Licenças',
     'Attendance': 'Gestão de Presenças',
+    'AttendanceJustifications': 'Justificativas de Ponto', 
     'WorkSchedules': 'Horários de Trabalho',
     'Settings': 'Configurações da Empresa',
   }
@@ -169,6 +213,7 @@ const getRoleLabel = computed(() => {
   if (authStore.isAdmin) return 'Administrador'
   return 'Utilizador'
 })
+
 
 const logout = async () => {
   if (confirm('Tem certeza que deseja sair?')) {
@@ -294,7 +339,85 @@ const logout = async () => {
   background-color: rgba(255, 255, 255, 0.05);
   color: white;
 }
+/* Submenu */
+.nav-group {
+  display: flex;
+  flex-direction: column;
+}
 
+.nav-item-parent {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-radius: 0.5rem;
+  margin: 0.125rem 0.5rem;
+}
+
+.nav-item-parent:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
+}
+
+.nav-item-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.submenu-icon {
+  font-size: 0.875rem;
+  transition: transform 0.3s;
+}
+
+.submenu-icon.rotated {
+  transform: rotate(180deg);
+}
+
+.submenu {
+  display: flex;
+  flex-direction: column;
+  padding-left: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.submenu-item {
+  padding: 0.625rem 1rem 0.625rem 2.5rem !important;
+  font-size: 0.9375rem;
+  position: relative;
+}
+
+.submenu-item::before {
+  content: '';
+  position: absolute;
+  left: 1.5rem;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.5;
+}
+
+.submenu-item.router-link-active::before {
+  width: 6px;
+  height: 6px;
+  opacity: 1;
+}
+
+.badge {
+  background: #ef4444;
+  color: white;
+  padding: 0.125rem 0.5rem;
+  border-radius: 1rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-left: auto;
+}
 .nav-item.router-link-active {
   color: white;
   background-color: #3b82f6;

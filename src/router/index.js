@@ -129,6 +129,11 @@ const routes = [
         name: 'Attendance',
         component: () => import('@/views/admin/Attendance.vue'),
       },
+         {
+      path: 'attendance/justifications',
+      name: 'AttendanceJustifications',
+      component: () => import('@/views/admin/AttendanceJustifications.vue'),
+    },
       {
         path: 'work-schedules',
         name: 'WorkSchedules',

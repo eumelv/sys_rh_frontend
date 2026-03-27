@@ -55,6 +55,28 @@ export const adminService = {
     }
   },
 
+   attendanceJustifications: {
+    getAll(params = {}) {
+      return api.get('/admin/attendance/justifications', { params })
+    },
+    
+    getStats() {
+      return api.get('/admin/attendance/justifications/stats')
+    },
+    
+    getById(id) {
+      return api.get(`/admin/attendance/justifications/${id}`)
+    },
+    
+    approve(id, data = {}) {
+      return api.post(`/admin/attendance/justifications/${id}/approve`, data)
+    },
+    
+    reject(id, data) {
+      return api.post(`/admin/attendance/justifications/${id}/reject`, data)
+    }
+  },
+  
   // ==================== ANNOUNCEMENTS ====================
   announcements: {
     getAll(params = {}) {
