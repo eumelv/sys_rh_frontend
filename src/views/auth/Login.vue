@@ -38,7 +38,7 @@
               <input type="checkbox" v-model="form.remember" />
               <span>Lembrar-me</span>
             </label>
-            <a href="#" class="forgot-link">Esqueceu a senha?</a>
+            <router-link to="/forgot-password" class="forgot-link">Esqueceu a senha?</router-link>
           </div>
 
           <button type="submit" class="btn-primary" :disabled="loading">
@@ -48,7 +48,7 @@
 
           <div class="auth-footer">
             <p>Não tem uma conta?</p>
-            <router-link to="/register" class="link">Registrar empresa</router-link>
+            <router-link to="/register" class="link">Criar conta</router-link>
           </div>
         </form>
       </div>
@@ -112,6 +112,14 @@ const handleLogin = async () => {
       router.push('/admin/dashboard')
     } else if (authStore.isEmployee) {
       router.push('/employee/dashboard')
+    } else {
+      // ✅ FALLBACK (Redirecionar para o dashboard apropriado se tiver pelo menos algum acesso)
+      if (authStore.user?.roles?.length > 0) {
+        router.push('/employee/dashboard') 
+      } else {
+        router.push('/login')
+        toast.error('Conta sem permissões de acesso.')
+      }
     }
   } catch (err) {
     console.error('❌ LOGIN ERROR:', err)
@@ -129,7 +137,9 @@ const handleLogin = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(rgba(15, 23, 42, 0.75), rgba(15, 23, 42, 0.75)), url('/images/auth-bg.png');
+  background-size: cover;
+  background-position: center;
   padding: 2rem;
 }
 
@@ -278,7 +288,9 @@ const handleLogin = async () => {
 }
 
 .auth-illustration {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(rgba(102, 126, 234, 0.8), rgba(118, 75, 162, 0.8)), url('/images/auth-bg.png');
+  background-size: cover;
+  background-position: center;
   color: white;
   padding: 3rem;
   display: flex;

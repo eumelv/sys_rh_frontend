@@ -10,8 +10,8 @@ export function useTheme() {
     if (savedTheme) {
       isDarkMode.value = savedTheme === 'dark'
     } else {
-      // Se não tiver salvo, usar preferência do sistema
-      isDarkMode.value = window.matchMedia('(prefers-color-scheme: dark)').matches
+      // Default to Light Mode
+      isDarkMode.value = false
     }
     
     applyTheme()

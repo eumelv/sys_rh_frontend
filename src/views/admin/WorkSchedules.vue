@@ -315,13 +315,18 @@ const openCreateModal = () => {
 }
 
 const editSchedule = (schedule) => {
-  editingId.value = schedule.id
-  Object.assign(form, {
-    ...schedule,
-    has_break: !!schedule.break_duration
-  })
-  showModal.value = true
-}
+   editingId.value = schedule.id
+   Object.assign(form, {
+     ...schedule,
+     // Convert time fields to HH:MM format for time inputs
+     start_time: schedule.start_time ? schedule.start_time.substring(0, 5) : '08:00',
+     end_time: schedule.end_time ? schedule.end_time.substring(0, 5) : '17:00',
+     break_start: schedule.break_start ? schedule.break_start.substring(0, 5) : null,
+     break_end: schedule.break_end ? schedule.break_end.substring(0, 5) : null,
+     has_break: !!schedule.break_duration
+   })
+   showModal.value = true
+ }
 
 const closeModal = () => {
   showModal.value = false

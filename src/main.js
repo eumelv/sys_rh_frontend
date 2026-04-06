@@ -10,6 +10,7 @@ import './assets/styles/dark-mode.css'
 import App from './App.vue'
 import './assets/styles/main.css'
 import i18n from './i18n'
+import DatePicker from 'primevue/datepicker'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -25,6 +26,8 @@ app.use(PrimeVue, {
     }
   }
 })
+
+app.component('DatePicker', DatePicker)
 app.use(Toast, {
   position: 'top-right',
   timeout: 3000,

@@ -1,7 +1,10 @@
 <template>
   <div class="employee-layout">
+    <!-- Mobile Overlay -->
+    <div v-if="isMobileMenuOpen" class="sidebar-overlay" @click="isMobileMenuOpen = false"></div>
+
     <!-- Sidebar -->
-    <aside class="sidebar" :class="{ 'collapsed': isCollapsed }">
+    <aside class="sidebar" :class="{ 'collapsed': isCollapsed, 'mobile-open': isMobileMenuOpen }">
       <div class="sidebar-header">
         <div class="logo">
           <i class="pi pi-user"></i>
@@ -65,6 +68,9 @@
     <main class="main-content">
       <header class="header">
         <div class="header-left">
+          <button class="mobile-menu-btn" @click="isMobileMenuOpen = true">
+            <i class="pi pi-bars"></i>
+          </button>
           <h2>{{ currentPageTitle }}</h2>
         </div>
         <div class="header-right">
@@ -90,11 +96,29 @@
         </slot>
       </div>
     </main>
+
+    <!-- Logout Confirmation Modal -->
+    <div v-if="showLogoutModal" class="modal-overlay" @click="showLogoutModal = false">
+      <div class="modal-content logout-modal" @click.stop>
+        <div class="modal-icon">
+          <i class="pi pi-exclamation-triangle"></i>
+        </div>
+        <h3>Confirmar Saída</h3>
+        <p>Tem a certeza que deseja encerrar a sua sessão no sistema?</p>
+        <div class="modal-actions">
+          <button class="btn-cancel" @click="showLogoutModal = false">Cancelar</button>
+          <button class="btn-confirm" @click="confirmLogout">
+            <i class="pi pi-sign-out"></i>
+            Sair Agora
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
@@ -103,6 +127,12 @@ const router = useRouter()
 const route = useRoute()
 
 const isCollapsed = ref(false)
+const isMobileMenuOpen = ref(false)
+
+// Close mobile menu on route change
+watch(() => route.path, () => {
+  isMobileMenuOpen.value = false
+})
 
 const currentPageTitle = computed(() => {
   const titles = {
@@ -119,11 +149,15 @@ const currentPageTitle = computed(() => {
   return titles[route.name] || 'Portal do Colaborador'
 })
 
-const logout = async () => {
-  if (confirm('Tem certeza que deseja sair?')) {
-    await authStore.logout()
-    router.push('/login')
-  }
+const showLogoutModal = ref(false)
+
+const logout = () => {
+  showLogoutModal.value = true
+}
+
+const confirmLogout = async () => {
+  await authStore.logout()
+  router.push('/login')
 }
 </script>
 
@@ -290,6 +324,10 @@ const logout = async () => {
   color: #1e293b;
 }
 
+.mobile-menu-btn {
+  display: none;
+}
+
 .header-right {
   display: flex;
   align-items: center;
@@ -347,22 +385,177 @@ const logout = async () => {
 }
 
 /* Responsive */
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .sidebar {
-    position: fixed;
-    z-index: 1000;
+    width: 80px;
   }
-  
-  .sidebar.collapsed {
-    transform: translateX(-100%);
+  .sidebar span, .sidebar .toggle-btn {
+    display: none;
   }
-  
+}
+
+@media (max-width: 768px) {
   .header {
     padding: 0 1rem;
   }
-  
+
+  .mobile-menu-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f1f5f9;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    font-size: 1.25rem;
+    color: #0f172a;
+    cursor: pointer;
+    margin-right: 1rem;
+    transition: all 0.2s;
+  }
+
+  .mobile-menu-btn:hover {
+    background: #e2e8f0;
+  }
+
+  .header-right .user-info {
+    display: none;
+  }
+
+  .sidebar {
+    position: fixed;
+    z-index: 1000;
+    left: -260px;
+    width: 260px !important;
+    box-shadow: 10px 0 15px rgba(0,0,0,0.1);
+  }
+
+  .sidebar span, .sidebar .toggle-btn {
+    display: inline;
+  }
+
+  .sidebar.mobile-open {
+    left: 0;
+  }
+
+  .sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 999;
+    backdrop-filter: blur(2px);
+  }
+
   .content-body {
     padding: 1rem;
   }
 }
-</style>
+/* Logout Modal Styles */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 1.5rem;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.logout-modal {
+  background: white;
+  padding: 2.5rem;
+  border-radius: 1.5rem;
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.modal-icon {
+  width: 64px;
+  height: 64px;
+  background: #fef2f2;
+  color: #ef4444;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.75rem;
+  margin: 0 auto 1.5rem;
+  border: 4px solid #fff1f2;
+}
+
+.logout-modal h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 0.75rem;
+}
+
+.logout-modal p {
+  color: #64748b;
+  margin-bottom: 2rem;
+  line-height: 1.5;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.modal-actions button {
+  flex: 1;
+  padding: 0.875rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.btn-cancel {
+  background: #f1f5f9;
+  border: none;
+  color: #475569;
+}
+
+.btn-cancel:hover {
+  background: #e2e8f0;
+}
+
+.btn-confirm {
+  background: #ef4444;
+  border: none;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.btn-confirm:hover {
+  background: #dc2626;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px) scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+</style>

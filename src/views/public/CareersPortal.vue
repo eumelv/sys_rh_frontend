@@ -1,569 +1,329 @@
 <template>
-    <div class="careers-portal">
-        <header class="portal-header">
-            <div class="container">
-                <h1>Oportunidades de Carreira</h1>
-                <p>Junte-se à nossa equipa e ajude-nos a construir o futuro</p>
-            </div>
-        </header>
-
-        <main class="container">
-            <div v-if="loading" class="loading-state">
-                <Loading message="Carregando vagas..." />
-            </div>
-
-            <div v-else-if="jobs.length === 0" class="empty-state">
-                <i class="pi pi-search"></i>
-                <h3>Nenhuma vaga aberta no momento</h3>
-                <p>Acompanhe esta página para futuras oportunidades</p>
-            </div>
-
-            <div v-else class="jobs-list">
-                <div v-for="job in jobs" :key="job.id" class="job-card">
-                    <div class="job-header">
-                        <h3>{{ job.title }}</h3>
-                        <span class="job-type">{{ formatType(job.employment_type) }}</span>
-                    </div>
-                    <p class="job-location">
-                        <i class="pi pi-map-marker"></i>
-                        {{ job.location || 'Remoto' }}
-                    </p>
-                    <p class="job-description">{{ truncate(job.description, 150) }}</p>
-                    <div class="job-footer">
-                        <span class="job-dept">{{ job.department?.name }}</span>
-                        <button @click="viewJob(job)" class="btn-primary">Ver Detalhes</button>
-                    </div>
-                </div>
-            </div>
-        </main>
-
-        <!-- Job Details Modal -->
-        <div v-if="showJobModal && selectedJob" class="modal-overlay" @click="closeJobModal">
-            <div class="modal" @click.stop>
-                <div class="modal-header">
-                    <h2>{{ selectedJob.title }}</h2>
-                    <button @click="closeJobModal" class="close-btn">
-                        <i class="pi pi-times"></i>
-                    </button>
-                </div>
-
-                <div class="modal-body">
-                    <div class="job-meta">
-                        <span class="meta-item">
-                            <i class="pi pi-map-marker"></i>
-                            {{ selectedJob.location || 'Remoto' }}
-                        </span>
-                        <span class="meta-item">
-                            <i class="pi pi-briefcase"></i>
-                            {{ formatType(selectedJob.employment_type) }}
-                        </span>
-                        <span class="meta-item">
-                            <i class="pi pi-building"></i>
-                            {{ selectedJob.department?.name }}
-                        </span>
-                    </div>
-
-                    <div class="job-section">
-                        <h3>Descrição da Vaga</h3>
-                        <p>{{ selectedJob.description }}</p>
-                    </div>
-
-                    <div v-if="selectedJob.salary_range" class="job-section">
-                        <h3>Faixa Salarial</h3>
-                        <p>{{ selectedJob.salary_range }}</p>
-                    </div>
-
-                    <button @click="openApplicationForm" class="btn-apply">
-                        <i class="pi pi-send"></i>
-                        Candidatar-me
-                    </button>
-                </div>
-            </div>
+  <div class="careers-portal">
+    <header class="portal-header">
+      <div class="container header-grid">
+        <div class="company-brand" v-if="company">
+          <img v-if="company.logo" :src="company.logo" :alt="company.name" class="company-logo" />
+          <div class="company-text">
+            <h1>{{ company.name }}</h1>
+            <p>Junte-se à nossa equipa e ajude-nos a construir o futuro</p>
+          </div>
         </div>
-
-        <!-- Application Form Modal -->
-        <div v-if="showApplicationForm" class="modal-overlay" @click="closeApplicationForm">
-            <div class="modal" @click.stop>
-                <div class="modal-header">
-                    <h2>Candidatura: {{ selectedJob?.title }}</h2>
-                    <button @click="closeApplicationForm" class="close-btn">
-                        <i class="pi pi-times"></i>
-                    </button>
-                </div>
-
-                <form @submit.prevent="submitApplication" class="modal-body">
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label>Nome Completo *</label>
-                            <input v-model="applicationForm.name" type="text" required />
-                        </div>
-                        <div class="form-group">
-                            <label>Email *</label>
-                            <input v-model="applicationForm.email" type="email" required />
-                        </div>
-                    </div>
-
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label>Telefone *</label>
-                            <input v-model="applicationForm.phone" type="tel" required />
-                        </div>
-                        <div class="form-group">
-                            <label>LinkedIn</label>
-                            <input v-model="applicationForm.linkedin" type="url"
-                                placeholder="https://linkedin.com/in/..." />
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Carta de Apresentação</label>
-                        <textarea v-model="applicationForm.cover_letter" rows="5"
-                            placeholder="Conte-nos porque é o candidato ideal..."></textarea>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Currículo (PDF) *</label>
-                        <input type="file" accept=".pdf" @change="handleFileUpload" required />
-                    </div>
-
-                    <div class="modal-footer">
-                        <button type="button" @click="closeApplicationForm" class="btn-secondary">Cancelar</button>
-                        <button type="submit" class="btn-primary" :disabled="submitting">
-                            {{ submitting ? 'Enviando...' : 'Enviar Candidatura' }}
-                        </button>
-                    </div>
-                </form>
-            </div>
+        <div v-else class="header-placeholder">
+          <h1>Portal de Carreiras</h1>
+          <p>Oportunidades profissionais aguardam por si</p>
         </div>
-    </div>
+      </div>
+    </header>
+
+    <main class="container">
+      <div class="search-filters" v-if="!selectedJob">
+        <div class="search-bar">
+          <i class="pi pi-search"></i>
+          <input v-model="searchQuery" placeholder="Pesquisar vagas..." @input="filterJobs" />
+        </div>
+      </div>
+
+      <div v-if="loading" class="loading-state">
+        <i class="pi pi-spin pi-spinner"></i>
+        <p>Carregando oportunidades...</p>
+      </div>
+
+      <div v-else-if="filteredJobs.length === 0 && !selectedJob" class="empty-state">
+        <div class="empty-icon">
+          <i class="pi pi-search"></i>
+        </div>
+        <h3>Nenhuma vaga aberta no momento</h3>
+        <p>Acompanhe esta página para futuras oportunidades ou tente outro termo de pesquisa.</p>
+      </div>
+
+      <!-- Job List -->
+      <div v-if="!selectedJob && filteredJobs.length > 0" class="jobs-grid">
+        <div v-for="job in filteredJobs" :key="job.id" class="job-card" @click="viewJob(job)">
+          <div class="job-card-header">
+            <h3>{{ job.title }}</h3>
+            <span class="type-tag">{{ formatType(job.employment_type) }}</span>
+          </div>
+          <div class="job-card-meta">
+            <span><i class="pi pi-map-marker"></i> {{ job.location || 'Remoto' }}</span>
+            <span><i class="pi pi-building"></i> {{ job.department?.name || 'Geral' }}</span>
+          </div>
+          <p class="job-card-description">{{ truncate(job.description, 140) }}</p>
+          <div class="job-card-footer">
+            <button class="btn-text">Ver Detalhes <i class="pi pi-arrow-right"></i></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Job Detail View -->
+      <div v-if="selectedJob" class="job-detail-view slide-up">
+        <button class="btn-back" @click="closeJob">
+           <i class="pi pi-arrow-left"></i> Voltar para a lista
+        </button>
+
+        <div class="detail-container">
+           <div class="detail-main">
+              <div class="detail-header">
+                <h1>{{ selectedJob.title }}</h1>
+                <div class="detail-meta">
+                   <span class="badge"><i class="pi pi-briefcase"></i> {{ formatType(selectedJob.employment_type) }}</span>
+                   <span class="badge"><i class="pi pi-map-marker"></i> {{ selectedJob.location || 'Remoto' }}</span>
+                   <span class="badge"><i class="pi pi-building"></i> {{ selectedJob.department?.name }}</span>
+                </div>
+              </div>
+
+              <div class="detail-section">
+                <h3>Descrição da Função</h3>
+                <div class="text-content" v-html="formatNewlines(selectedJob.description)"></div>
+              </div>
+
+              <div class="detail-section" v-if="selectedJob.requirements">
+                <h3>Requisitos</h3>
+                <div class="text-content" v-html="formatNewlines(selectedJob.requirements)"></div>
+              </div>
+           </div>
+
+           <aside class="apply-sidebar">
+              <div class="apply-card">
+                 <h3>Candidatar-me agora</h3>
+                 <p>Preencha os dados abaixo para submeter o seu currículo.</p>
+                 
+                 <form @submit.prevent="submitApplication" class="apply-form">
+                    <div class="form-row">
+                       <label>Nome Completo *</label>
+                       <input v-model="form.first_name" type="text" placeholder="Seu nome" required />
+                       <input v-model="form.last_name" type="text" placeholder="Seu apelido" required />
+                    </div>
+                    <div class="form-row">
+                       <label>Email *</label>
+                       <input v-model="form.email" type="email" placeholder="email@exemplo.com" required />
+                    </div>
+                    <div class="form-row">
+                       <label>Telefone</label>
+                       <input v-model="form.phone" type="tel" placeholder="+351 --- --- ---" />
+                    </div>
+                    <div class="form-row">
+                       <label>Currículo (PDF) *</label>
+                       <div class="file-input-wrapper" :class="{ 'has-file': form.resume }">
+                          <input type="file" accept=".pdf,.doc,.docx" @change="handleFileUpload" required />
+                          <div class="file-placeholder">
+                             <i class="pi pi-cloud-upload"></i>
+                             <span>{{ form.resume ? form.resume.name : 'Selecionar ficheiro...' }}</span>
+                          </div>
+                       </div>
+                    </div>
+                    <div class="form-row">
+                       <label>Mensagem / Observações</label>
+                       <textarea v-model="form.cover_letter" rows="3" placeholder="Algo que queira destacar..."></textarea>
+                    </div>
+
+                    <button type="submit" class="btn-submit" :disabled="submitting">
+                       <i v-if="submitting" class="pi pi-spin pi-spinner"></i>
+                       {{ submitting ? 'Processando...' : 'Enviar Candidatura' }}
+                    </button>
+                 </form>
+              </div>
+           </aside>
+        </div>
+      </div>
+    </main>
+
+    <footer class="portal-footer">
+       <p>&copy; {{ new Date().getFullYear() }} {{ company?.name }} - Powered by sys_rh</p>
+    </footer>
+  </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
-import api from '@/services/api'
-import Loading from '@/components/common/Loading.vue'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import axios from 'axios'
+import { useToast } from 'vue-toastification'
+
+const route = useRoute()
+const router = useRouter()
+const toast = useToast()
 
 const loading = ref(true)
 const submitting = ref(false)
+const company = ref(null)
 const jobs = ref([])
+const filteredJobs = ref([])
 const selectedJob = ref(null)
-const showJobModal = ref(false)
-const showApplicationForm = ref(false)
+const searchQuery = ref('')
 
-const applicationForm = reactive({
-    name: '',
-    email: '',
-    phone: '',
-    linkedin: '',
-    cover_letter: '',
-    resume: null
+const form = reactive({
+  first_name: '',
+  last_name: '',
+  email: '',
+  phone: '',
+  cover_letter: '',
+  resume: null
 })
 
-const fetchJobs = async () => {
+const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
+
+const fetchData = async () => {
     loading.value = true
+    const companySlug = route.params.companySlug
+    const jobSlug = route.params.jobSlug
+    
     try {
-        // Try public endpoint first, fallback to admin endpoint
-        const { data } = await api.get('/admin/job-postings')
-        jobs.value = data.filter(j => j.status === 'published')
+        const { data } = await axios.get(`${baseUrl}/public/jobs/${companySlug}`)
+        company.value = data.company
+        jobs.value = data.jobs
+        filteredJobs.value = data.jobs
+
+        // If jobSlug is in URL, auto-select it
+        if (jobSlug) {
+            selectedJob.value = jobs.value.find(j => j.slug === jobSlug)
+        }
     } catch (error) {
-        console.error('Error fetching jobs:', error)
+        toast.error('Não foi possível carregar as vagas.')
     } finally {
         loading.value = false
     }
 }
 
-const formatType = (type) => {
-    const types = {
-        'full-time': 'Tempo Inteiro',
-        'part-time': 'Meio Período',
-        'contract': 'Contrato',
-        'intern': 'Estágio'
-    }
-    return types[type] || type
-}
-
-const truncate = (text, length) => {
-    if (!text) return ''
-    return text.length > length ? text.substring(0, length) + '...' : text
+const filterJobs = () => {
+    const q = searchQuery.value.toLowerCase()
+    filteredJobs.value = jobs.value.filter(j => 
+        j.title.toLowerCase().includes(q) || 
+        j.department?.name?.toLowerCase().includes(q) ||
+        j.description.toLowerCase().includes(q)
+    )
 }
 
 const viewJob = (job) => {
     selectedJob.value = job
-    showJobModal.value = true
+    router.push(`/jobs/${route.params.companySlug}/${job.slug}`)
 }
 
-const closeJobModal = () => {
-    showJobModal.value = false
+const closeJob = () => {
+    selectedJob.value = null
+    router.push(`/jobs/${route.params.companySlug}`)
 }
 
-const openApplicationForm = () => {
-    showJobModal.value = false
-    showApplicationForm.value = true
-}
-
-const closeApplicationForm = () => {
-    showApplicationForm.value = false
-    resetForm()
-}
-
-const handleFileUpload = (event) => {
-    applicationForm.resume = event.target.files[0]
+const handleFileUpload = (e) => {
+    form.resume = e.target.files[0]
 }
 
 const submitApplication = async () => {
     submitting.value = true
     try {
-        const formData = new FormData()
-        formData.append('job_posting_id', selectedJob.value.id)
-        formData.append('name', applicationForm.name)
-        formData.append('email', applicationForm.email)
-        formData.append('phone', applicationForm.phone)
-        formData.append('linkedin', applicationForm.linkedin)
-        formData.append('cover_letter', applicationForm.cover_letter)
-        if (applicationForm.resume) {
-            formData.append('resume', applicationForm.resume)
-        }
+        const fd = new FormData()
+        fd.append('first_name', form.first_name)
+        fd.append('last_name', form.last_name)
+        fd.append('email', form.email)
+        fd.append('phone', form.phone)
+        fd.append('cover_letter', form.cover_letter)
+        fd.append('resume', form.resume)
 
-        await api.post('/public/applications', formData, {
+        await axios.post(`${baseUrl}/public/jobs/${selectedJob.value.id}/apply`, fd, {
             headers: { 'Content-Type': 'multipart/form-data' }
         })
 
-        alert('Candidatura enviada com sucesso! Entraremos em contacto em breve.')
-        closeApplicationForm()
+        toast.success('Candidatura enviada com sucesso!')
+        resetForm()
+        closeJob()
     } catch (error) {
-        alert('Erro ao enviar candidatura. Por favor, tente novamente.')
+        toast.error('Erro ao submeter candidatura. Verifique os campos.')
     } finally {
         submitting.value = false
     }
 }
 
 const resetForm = () => {
-    Object.assign(applicationForm, {
-        name: '',
-        email: '',
-        phone: '',
-        linkedin: '',
-        cover_letter: '',
-        resume: null
-    })
+    Object.assign(form, { first_name: '', last_name: '', email: '', phone: '', cover_letter: '', resume: null })
 }
 
-onMounted(() => {
-    fetchJobs()
-})
+const formatType = (type) => {
+    const map = { 'full-time': 'Tempo Inteiro', 'part-time': 'Meio Período', 'contract': 'Contrato', 'intern': 'Estágio' }
+    return map[type] || type
+}
+
+const truncate = (str, n) => str?.length > n ? str.substr(0, n - 1) + '...' : str
+const formatNewlines = (str) => str?.replace(/\n/g, '<br>') || ''
+
+onMounted(() => fetchData())
 </script>
 
 <style scoped>
-.careers-portal {
-    min-height: 100vh;
-    background: #f8fafc;
+.careers-portal { min-height: 100vh; background: #f4f7fa; font-family: 'Inter', sans-serif; }
+.portal-header { background: #1e293b; color: white; padding: 4rem 0; border-bottom: 4px solid #3b82f6; }
+.container { max-width: 1100px; margin: 0 auto; padding: 0 2rem; }
+
+.company-brand { display: flex; align-items: center; gap: 2rem; flex-wrap: wrap; justify-content: center; text-align: center; }
+.company-logo { height: 80px; width: 80px; object-fit: contain; background: white; border-radius: 12px; padding: 0.5rem; }
+.company-text h1 { font-size: min(2.5rem, 8vw); font-weight: 800; margin: 0; }
+.company-text p { font-size: 1.1rem; opacity: 0.8; margin: 0.5rem 0 0; }
+
+.search-filters { transform: translateY(-50%); }
+.search-bar { background: white; padding: 1.25rem 2rem; border-radius: 16px; box-shadow: 0 15px 30px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 1rem; }
+.search-bar i { color: #94a3b8; font-size: 1.2rem; }
+.search-bar input { border: none; width: 100%; font-size: 1.1rem; color: #1e293b; }
+.search-bar input:focus { outline: none; }
+
+.jobs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem; padding: 2rem 0 5rem; }
+.job-card { background: white; padding: 2rem; border-radius: 20px; border: 1px solid #e2e8f0; transition: 0.3s; cursor: pointer; display: flex; flex-direction: column; }
+.job-card:hover { transform: translateY(-8px); border-color: #3b82f6; box-shadow: 0 12px 20px rgba(59, 130, 246, 0.1); }
+
+.job-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; }
+.job-card-header h3 { margin: 0; font-size: 1.25rem; font-weight: 700; color: #1e293b; }
+.type-tag { font-size: 0.7rem; font-weight: 800; background: #eff6ff; color: #2563eb; padding: 0.25rem 0.75rem; border-radius: 20px; text-transform: uppercase; }
+
+.job-card-meta { display: flex; gap: 1rem; font-size: 0.85rem; color: #64748b; margin-bottom: 1rem; }
+.job-card-meta i { margin-right: 0.25rem; }
+.job-card-description { font-size: 0.95rem; color: #475569; line-height: 1.5; margin-bottom: 1.5rem; flex-grow: 1; }
+
+.btn-text { background: none; border: none; color: #3b82f6; font-weight: 700; display: flex; align-items: center; gap: 0.5rem; cursor: pointer; }
+
+.job-detail-view { padding: 2rem 0 6rem; }
+.btn-back { background: transparent; border: none; color: #64748b; font-weight: 600; cursor: pointer; margin-bottom: 2rem; display: flex; align-items: center; gap: 0.5rem; }
+.btn-back:hover { color: #1e293b; }
+
+.detail-container { display: grid; grid-template-columns: 1fr 380px; gap: 3rem; }
+.detail-main { background: white; padding: 3rem; border-radius: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+.detail-header h1 { font-size: min(2.25rem, 9vw); font-weight: 800; color: #1e293b; margin: 0 0 1rem; }
+.detail-meta { display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap; }
+.badge { display: flex; align-items: center; gap: 0.4rem; font-size: 0.9rem; color: #64748b; }
+
+.detail-section { margin-bottom: 2.5rem; }
+.detail-section h3 { font-size: 1.25rem; font-weight: 700; color: #1e293b; margin-bottom: 1rem; border-left: 4px solid #3b82f6; padding-left: 1rem; }
+.text-content { font-size: 1.05rem; color: #334155; line-height: 1.7; }
+
+.apply-card { background: #1e293b; color: white; padding: 2.5rem; border-radius: 24px; position: sticky; top: 2rem; }
+.apply-card h3 { font-size: 1.5rem; font-weight: 700; margin: 0 0 1rem; }
+.apply-card p { font-size: 0.95rem; opacity: 0.8; margin-bottom: 2rem; }
+
+.form-row { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1.25rem; }
+.form-row label { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; color: #94a3b8; }
+.form-row input, .form-row textarea { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 0.8rem 1rem; color: white; }
+.form-row input:focus { outline: none; border-color: #3b82f6; background: rgba(255,255,255,0.1); }
+
+.file-input-wrapper { position: relative; border: 2px dashed rgba(255,255,255,0.2); border-radius: 12px; padding: 1.5rem; text-align: center; cursor: pointer; transition: 0.3s; }
+.file-input-wrapper input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+.file-placeholder { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
+.file-placeholder i { font-size: 1.5rem; color: #3b82f6; }
+.file-input-wrapper.has-file { border-color: #10b981; background: rgba(16, 185, 129, 0.05); }
+
+.btn-submit { width: 100%; background: #3b82f6; color: white; border: none; padding: 1rem; border-radius: 12px; font-weight: 800; font-size: 1rem; cursor: pointer; transition: 0.3s; margin-top: 1rem; }
+.btn-submit:hover { background: #2563eb; transform: scale(1.02); }
+
+.portal-footer { text-align: center; padding: 4rem 0; color: #94a3b8; font-size: 0.9rem; }
+
+@media (max-width: 900px) {
+  .detail-container { grid-template-columns: 1fr; gap: 2rem; }
+  .apply-sidebar { order: -1; }
+  .detail-main { padding: 1.5rem; }
 }
 
-.portal-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 4rem 0;
-    text-align: center;
-}
-
-.portal-header h1 {
-    font-size: 2.5rem;
-    font-weight: 800;
-    margin-bottom: 1rem;
-}
-
-.portal-header p {
-    font-size: 1.25rem;
-    opacity: 0.9;
-}
-
-.container {
-    max-width: 1000px;
-    margin: 0 auto;
-    padding: 0 2rem;
-}
-
-.jobs-list {
-    display: grid;
-    gap: 1.5rem;
-    padding: 3rem 0;
-}
-
-.job-card {
-    background: white;
-    padding: 2rem;
-    border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    border: 1px solid #e2e8f0;
-    transition: all 0.3s;
-}
-
-.job-card:hover {
-    transform: translateY(-4px);
-    border-color: #667eea;
-    box-shadow: 0 10px 15px -3px rgba(102, 126, 234, 0.2);
-}
-
-.job-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 1rem;
-}
-
-.job-header h3 {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #1e293b;
-    margin: 0;
-}
-
-.job-type {
-    background: #eff6ff;
-    color: #1e40af;
-    padding: 0.25rem 0.75rem;
-    border-radius: 9999px;
-    font-size: 0.75rem;
-    font-weight: 600;
-}
-
-.job-location {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: #64748b;
-    margin-bottom: 1rem;
-}
-
-.job-description {
-    color: #475569;
-    line-height: 1.6;
-    margin-bottom: 1.5rem;
-}
-
-.job-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.job-dept {
-    font-weight: 600;
-    color: #667eea;
-}
-
-.btn-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: transform 0.2s;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.btn-primary:hover {
-    transform: translateY(-2px);
-}
-
-.loading-state,
-.empty-state {
-    padding: 5rem 0;
-    text-align: center;
-    color: #64748b;
-}
-
-.empty-state i {
-    font-size: 4rem;
-    margin-bottom: 1rem;
-    opacity: 0.5;
-}
-
-/* Modal Styles */
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-    padding: 1rem;
-}
-
-.modal {
-    background: white;
-    border-radius: 12px;
-    width: 100%;
-    max-width: 700px;
-    max-height: 90vh;
-    overflow-y: auto;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
-}
-
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1.5rem;
-    border-bottom: 1px solid #e5e7eb;
-}
-
-.modal-header h2 {
-    margin: 0;
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #1e293b;
-}
-
-.close-btn {
-    width: 36px;
-    height: 36px;
-    border: none;
-    background: #f3f4f6;
-    border-radius: 50%;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background 0.2s;
-}
-
-.close-btn:hover {
-    background: #e5e7eb;
-}
-
-.modal-body {
-    padding: 1.5rem;
-}
-
-.job-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1.5rem;
-    margin-bottom: 2rem;
-    padding-bottom: 1.5rem;
-    border-bottom: 1px solid #e5e7eb;
-}
-
-.meta-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: #64748b;
-    font-size: 0.875rem;
-}
-
-.job-section {
-    margin-bottom: 2rem;
-}
-
-.job-section h3 {
-    font-size: 1.125rem;
-    font-weight: 700;
-    color: #1e293b;
-    margin-bottom: 0.75rem;
-}
-
-.job-section p {
-    color: #475569;
-    line-height: 1.6;
-}
-
-.btn-apply {
-    width: 100%;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-    padding: 1rem;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 1rem;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    transition: transform 0.2s;
-}
-
-.btn-apply:hover {
-    transform: translateY(-2px);
-}
-
-.form-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-    margin-bottom: 1rem;
-}
-
-.form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
-}
-
-.form-group label {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: #374151;
-}
-
-.form-group input,
-.form-group textarea {
-    padding: 0.75rem 1rem;
-    border: 2px solid #e5e7eb;
-    border-radius: 8px;
-    font-size: 0.875rem;
-    transition: border-color 0.2s;
-}
-
-.form-group input:focus,
-.form-group textarea:focus {
-    outline: none;
-    border-color: #667eea;
-}
-
-.modal-footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 1rem;
-    margin-top: 1.5rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid #e5e7eb;
-}
-
-.btn-secondary {
-    padding: 0.75rem 1.5rem;
-    background: white;
-    border: 2px solid #e5e7eb;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.btn-secondary:hover {
-    background: #f9fafb;
-    border-color: #d1d5db;
-}
-
-@media (max-width: 768px) {
-    .form-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .portal-header h1 {
-        font-size: 2rem;
-    }
+@media (max-width: 600px) {
+  .portal-header { padding: 2rem 0 4rem; }
+  .company-brand { gap: 1rem; }
+  .company-logo { height: 60px; width: 60px; }
+  .search-bar { padding: 1rem; }
+  .job-card { padding: 1.25rem; }
+  .apply-card { padding: 1.5rem; }
 }
 </style>

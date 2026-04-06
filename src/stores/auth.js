@@ -10,18 +10,23 @@ export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = computed(() => !!token.value && !!user.value)
   
   const isSuperAdmin = computed(() => {
-    if (!user.value?.roles) return false
-    return user.value.roles.some(role => role.name === 'super-admin')
+    const roles = user.value?.roles || []
+    return roles.some(role => role.name === 'super-admin')
   })
 
   const isAdmin = computed(() => {
-    if (!user.value?.roles) return false
-    return user.value.roles.some(role => role.name === 'admin' || role.name === 'super-admin')
+    const roles = user.value?.roles || []
+    return roles.some(role => ['admin', 'super-admin', 'manager', 'finance', 'hr'].includes(role.name))
+  })
+
+  const isManager = computed(() => {
+    const roles = user.value?.roles || []
+    return roles.some(role => role.name === 'manager')
   })
 
   const isEmployee = computed(() => {
-    if (!user.value?.roles) return false
-    return user.value.roles.some(role => role.name === 'employee')
+    const roles = user.value?.roles || []
+    return roles.some(role => role.name === 'employee')
   })
 
   const userRole = computed(() => {
@@ -45,15 +50,8 @@ export const useAuthStore = defineStore('auth', () => {
         localStorage.setItem('company', JSON.stringify(data.company))
       }
 
-      // ✅ DEBUG - Verificar roles
-      console.log('🔍 USER ROLES:', data.user?.roles)
-      console.log('🔍 Is Super Admin?', isSuperAdmin.value)
-      console.log('🔍 Is Admin?', isAdmin.value)
-      console.log('🔍 Is Employee?', isEmployee.value)
-
       return data
     } catch (error) {
-      console.error('Login error:', error)
       throw error
     }
   }
@@ -65,7 +63,7 @@ export const useAuthStore = defineStore('auth', () => {
         await api.post('/auth/logout')
       }
     } catch (error) {
-      console.error('Logout error:', error)
+      // Logout error is non-critical
     } finally {
       user.value = null
       company.value = null
@@ -90,8 +88,6 @@ export const useAuthStore = defineStore('auth', () => {
       if (data.company) {
         localStorage.setItem('company', JSON.stringify(data.company))
       }
-
-      console.log('🔍 FETCH USER ROLES:', data.user?.roles)
 
       return data
     } catch (error) {
@@ -128,6 +124,48 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  const register = async (userData) => {
+    try {
+      const { data } = await api.post('/auth/register', userData)
+      
+      token.value = data.token
+      user.value = data.user
+      company.value = data.company || null
+      
+      localStorage.setItem('token', data.token)
+      localStorage.setItem('user', JSON.stringify(data.user))
+      
+      if (data.company) {
+        localStorage.setItem('company', JSON.stringify(data.company))
+      }
+
+      return data
+    } catch (error) {
+      console.error('Registration error:', error)
+      throw error
+    }
+  }
+
+  const forgotPassword = async (email) => {
+    try {
+      const { data } = await api.post('/auth/forgot-password', { email })
+      return data
+    } catch (error) {
+      console.error('Forgot password error:', error)
+      throw error
+    }
+  }
+
+  const resetPassword = async (payload) => {
+    try {
+      const { data } = await api.post('/auth/reset-password', payload)
+      return data
+    } catch (error) {
+      console.error('Reset password error:', error)
+      throw error
+    }
+  }
+
   return {
     user,
     company,
@@ -135,11 +173,15 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     isSuperAdmin,
     isAdmin,
+    isManager,
     isEmployee,
     userRole,
     login,
     logout,
     fetchUser,
-    initAuth
+    initAuth,
+    register,
+    forgotPassword,
+    resetPassword
   }
 })

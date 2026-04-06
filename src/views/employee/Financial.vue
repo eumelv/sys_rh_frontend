@@ -241,6 +241,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { employeeService } from '@/services/employeeService'
+import api from '@/services/api'
 import { useToast } from 'vue-toastification'
 
 const toast = useToast()
@@ -291,10 +292,24 @@ const closeModal = () => {
   selectedPayroll.value = null
 }
 
-const downloadPayroll = (payroll) => {
-  // TODO: Implementar geração de PDF
-  toast.info('Download de PDF será implementado em breve')
-  console.log('Download payroll:', payroll.id)
+const downloadPayroll = async (payroll) => {
+  try {
+    toast.info('A gerar PDF do holerite...')
+    const response = await api.get(`/employee/payrolls/${payroll.id}/pdf`, {
+      responseType: 'blob'
+    })
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `holerite_${payroll.reference_period?.replace('/', '_')}.pdf`)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
+    toast.success('PDF baixado com sucesso!')
+  } catch (error) {
+    toast.error('Erro ao baixar PDF do holerite')
+  }
 }
 
 const getItemsByType = (type) => {

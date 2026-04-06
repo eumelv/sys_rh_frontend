@@ -19,8 +19,26 @@ const routes = [
     meta: { requiresAuth: false, layout: 'blank' },
   },
   {
-    path: '/careers',
-    name: 'CareersPortal',
+    path: '/forgot-password',
+    name: 'ForgotPassword',
+    component: () => import('@/views/auth/ForgotPassword.vue'),
+    meta: { requiresAuth: false, layout: 'blank' },
+  },
+  {
+    path: '/reset-password',
+    name: 'ResetPassword',
+    component: () => import('@/views/auth/ResetPassword.vue'),
+    meta: { requiresAuth: false, layout: 'blank' },
+  },
+  {
+    path: '/jobs/:companySlug',
+    name: 'PublicJobs',
+    component: () => import('@/views/public/CareersPortal.vue'),
+    meta: { requiresAuth: false, layout: 'blank' },
+  },
+  {
+    path: '/jobs/:companySlug/:jobSlug',
+    name: 'JobDetail',
     component: () => import('@/views/public/CareersPortal.vue'),
     meta: { requiresAuth: false, layout: 'blank' },
   },
@@ -104,11 +122,17 @@ const routes = [
         name: 'Settings',
         component: () => import('@/views/admin/Settings.vue'),
       },
-      {
-        path: 'payroll',
-        name: 'Payroll',
-        component: () => import('@/views/admin/Payroll.vue'),
-      },
+       {
+         path: 'payroll',
+         name: 'Payroll',
+         component: () => import('@/views/admin/Payroll.vue'),
+       },
+       {
+         path: 'payroll/generate',
+         name: 'GeneratePayroll',
+         component: () => import('@/views/admin/GeneratePayroll.vue'),
+         meta: { requiresAuth: true, requiresAdmin: true },
+       },
       {
         path: 'recruitment',
         name: 'Recruitment',
@@ -120,20 +144,35 @@ const routes = [
         component: () => import('@/views/admin/Leaves.vue'),
       },
       {
+        path: 'leaves/create',
+        name: 'LeaveCreate',
+        component: () => import('@/views/admin/LeaveForm.vue'),
+      },
+      {
+        path: 'leaves/:id/edit',
+        name: 'LeaveEdit',
+        component: () => import('@/views/admin/LeaveForm.vue'),
+      },
+      {
         path: 'leave-types',
         name: 'AdminLeaveTypes',
         component: () => import('@/views/admin/LeaveTypes.vue'),
       },
-      {
-        path: 'attendance',
-        name: 'Attendance',
-        component: () => import('@/views/admin/Attendance.vue'),
-      },
-         {
-      path: 'attendance/justifications',
-      name: 'AttendanceJustifications',
-      component: () => import('@/views/admin/AttendanceJustifications.vue'),
-    },
+       {
+         path: 'attendance',
+         name: 'Attendance',
+         component: () => import('@/views/admin/Attendance.vue'),
+       },
+       {
+         path: 'attendance/justifications',
+         name: 'AttendanceJustifications',
+         component: () => import('@/views/admin/Justifications.vue'),
+       },
+       {
+         path: 'attendance/map',
+         name: 'AbsenceMap',
+         component: () => import('@/views/admin/AbsenceMap.vue'),
+       },
       {
         path: 'work-schedules',
         name: 'WorkSchedules',
@@ -143,6 +182,11 @@ const routes = [
         path: 'requests',
         name: 'AdminRequests',
         component: () => import('@/views/admin/Requests.vue'),
+      },
+      {
+        path: 'reports',
+        name: 'AdminReports',
+        component: () => import('@/views/admin/Reports.vue'),
       },
     ],
   },
@@ -175,11 +219,6 @@ const routes = [
         name: 'EmployeeLeaves',
         component: () => import('@/views/employee/Leaves.vue'),
       },
-       {
-      path: 'financial',
-      name: 'EmployeeFinancial',
-      component: () => import('@/views/employee/Financial.vue'),
-    },
       {
         path: 'documents',
         name: 'EmployeeDocuments',
@@ -223,16 +262,11 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
 
-  console.log('🔍 ROUTER:', to.path)
-  console.log('🔍 isAuthenticated:', authStore.isAuthenticated)
-
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    console.log('❌ Redirect login')
     return next('/login')
   }
 
   if ((to.path === '/login' || to.path === '/register') && authStore.isAuthenticated) {
-    console.log('✅ Redirect dashboard')
     
     if (authStore.isSuperAdmin) {
       return next('/super-admin/dashboard')
@@ -240,19 +274,56 @@ router.beforeEach((to, from, next) => {
       return next('/admin/dashboard')
     } else if (authStore.isEmployee) {
       return next('/employee/dashboard')
+    } else {
+      return next('/admin/dashboard')
     }
   }
 
   if (to.meta.requiresSuperAdmin && !authStore.isSuperAdmin) {
-    return next('/admin/dashboard')
+    return next(authStore.isAdmin ? '/admin/dashboard' : '/login')
   }
 
   if (to.meta.requiresAdmin && !authStore.isAdmin) {
-    return next('/employee/dashboard')
+    if (authStore.isEmployee) {
+      return next('/employee/dashboard')
+    }
+    return next('/login')
   }
 
   if (to.path.startsWith('/employee') && !authStore.isEmployee) {
-    return next('/admin/dashboard')
+    if (authStore.isAdmin) {
+      return next('/admin/dashboard')
+    }
+    return next('/login')
+  }
+
+  // ✅ PROTEÇÃO PARA O CARGO FINANCEIRO
+  const isFinance = authStore.user?.roles?.some(r => r.name === 'finance')
+  if (isFinance && to.path.startsWith('/admin/')) {
+    const allowedPaths = [
+      '/admin/dashboard',
+      '/admin/employees',
+      '/admin/payroll',
+      '/admin/attendance'
+    ]
+    const isAllowed = allowedPaths.some(path => to.path.startsWith(path))
+    if (!isAllowed) {
+      return next('/admin/dashboard')
+    }
+  }
+
+  // ✅ PROTEÇÃO PARA O CARGO RH (HR)
+  const isHR = authStore.user?.roles?.some(r => r.name === 'hr')
+  if (isHR && to.path.startsWith('/admin/')) {
+    const forbiddenPaths = [
+      '/admin/users',
+      '/admin/settings',
+      '/admin/announcements'
+    ]
+    const isForbidden = forbiddenPaths.some(path => to.path.startsWith(path))
+    if (isForbidden) {
+      return next('/admin/dashboard')
+    }
   }
 
   next()

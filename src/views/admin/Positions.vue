@@ -23,51 +23,53 @@
             </div>
 
             <div v-else>
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Título</th>
-                            <th>Código</th>
-                            <th>Departamento</th>
-                            <th>Salário (Min/Máx)</th>
-                            <th>Status</th>
-                            <th>Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="position in positions" :key="position.id">
-                            <td>
-                                <div class="position-title">{{ position.title }}</div>
-                                <div class="position-desc">{{ truncate(position.description, 50) }}</div>
-                            </td>
-                            <td>{{ position.code || '-' }}</td>
-                            <td>{{ position.department?.name || '-' }}</td>
-                            <td>
-                                <div class="salary-range">
-                                    {{ formatCurrency(position.min_salary) }} - {{ formatCurrency(position.max_salary)
-                                    }}
-                                </div>
-                            </td>
-                            <td>
-                                <span
-                                    :class="`status-badge ${position.is_active ? 'status-active' : 'status-inactive'}`">
-                                    {{ position.is_active ? 'Ativo' : 'Inativo' }}
-                                </span>
-                            </td>
-                            <td>
-                                <div class="action-buttons">
-                                    <button @click="editPosition(position)" class="btn-icon" title="Editar">
-                                        <i class="pi pi-pencil"></i>
-                                    </button>
-                                    <button @click="deletePosition(position)" class="btn-icon btn-danger"
-                                        title="Excluir">
-                                        <i class="pi pi-trash"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Título</th>
+                                <th>Código</th>
+                                <th>Departamento</th>
+                                <th>Salário (Min/Máx)</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="position in positions" :key="position.id">
+                                <td>
+                                    <div class="position-title">{{ position.title }}</div>
+                                    <div class="position-desc">{{ truncate(position.description, 50) }}</div>
+                                </td>
+                                <td>{{ position.code || '-' }}</td>
+                                <td>{{ position.department?.name || '-' }}</td>
+                                <td>
+                                    <div class="salary-range">
+                                        {{ formatCurrency(position.min_salary) }} - {{ formatCurrency(position.max_salary)
+                                        }}
+                                    </div>
+                                </td>
+                                <td>
+                                    <span
+                                        :class="`status-badge ${position.is_active ? 'status-active' : 'status-inactive'}`">
+                                        {{ position.is_active ? 'Ativo' : 'Inativo' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <button @click="editPosition(position)" class="btn-icon" title="Editar">
+                                            <i class="pi pi-pencil"></i>
+                                        </button>
+                                        <button @click="deletePosition(position)" class="btn-icon btn-danger"
+                                            title="Excluir">
+                                            <i class="pi pi-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </Card>
 
@@ -294,6 +296,7 @@ onMounted(() => {
     justify-content: space-between;
     align-items: center;
     gap: 1rem;
+    flex-wrap: wrap;
 }
 
 .search-box {

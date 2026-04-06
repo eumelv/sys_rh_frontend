@@ -185,13 +185,13 @@
             <div v-if="selectedAnnouncement.attachments && selectedAnnouncement.attachments.length > 0" class="detail-attachments">
               <h4>Anexos</h4>
               <div class="attachments-list">
-                
+                <a
                   v-for="(attachment, index) in selectedAnnouncement.attachments"
                   :key="index"
                   href="#"
                   class="attachment-item"
                   @click.prevent="downloadAttachment(attachment)"
-                <a>
+                >
                   <i class="pi pi-file"></i>
                   <span>{{ attachment.name }}</span>
                   <i class="pi pi-download"></i>

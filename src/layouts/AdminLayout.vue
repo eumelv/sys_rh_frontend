@@ -1,7 +1,10 @@
 <template>
   <div class="admin-layout">
+    <!-- Mobile Overlay -->
+    <div v-if="isMobileMenuOpen" class="sidebar-overlay" @click="isMobileMenuOpen = false"></div>
+
     <!-- Sidebar -->
-    <aside class="sidebar" :class="{ 'collapsed': isCollapsed }">
+    <aside class="sidebar" :class="{ 'collapsed': isCollapsed, 'mobile-open': isMobileMenuOpen }">
       <div class="sidebar-header">
         <div class="logo">
           <i class="pi pi-briefcase"></i>
@@ -23,37 +26,49 @@
     <span v-if="!isCollapsed">Funcionários</span>
   </router-link>
   
-  <router-link to="/admin/departments" class="nav-item">
+  <router-link v-if="!isFinance" to="/admin/departments" class="nav-item">
     <i class="pi pi-sitemap"></i>
     <span v-if="!isCollapsed">Departamentos</span>
   </router-link>
   
-  <router-link to="/admin/positions" class="nav-item">
+  <router-link v-if="!isFinance" to="/admin/positions" class="nav-item">
     <i class="pi pi-briefcase"></i>
     <span v-if="!isCollapsed">Cargos</span>
   </router-link>
 
-  <router-link to="/admin/requests" class="nav-item">
-    <i class="pi pi-inbox"></i>
-    <span v-if="!isCollapsed">Solicitações</span>
-  </router-link>
-  
-  <router-link to="/admin/leaves" class="nav-item">
-    <i class="pi pi-calendar"></i>
-    <span v-if="!isCollapsed">Licenças</span>
-  </router-link>
+  <!-- Submenu Licenças -->
+  <div v-if="!isFinance" class="nav-group">
+    <div class="nav-item-parent" @click="toggleSubmenu('leaves')">
+      <div class="nav-item-content">
+        <i class="pi pi-calendar"></i>
+        <span v-if="!isCollapsed">Licenças</span>
+      </div>
+      <i v-if="!isCollapsed" class="pi pi-chevron-down submenu-icon" :class="{ rotated: openSubmenus.leaves }"></i>
+    </div>
+    
+    <div v-if="openSubmenus.leaves" class="submenu">
+      <router-link to="/admin/leave-types" class="nav-item submenu-item">
+        <i class="pi pi-tags"></i>
+        <span v-if="!isCollapsed">Tipos de Licença</span>
+      </router-link>
+      <router-link to="/admin/leaves" class="nav-item submenu-item">
+        <i class="pi pi-calendar-plus"></i>
+        <span v-if="!isCollapsed">Gerir Licenças</span>
+      </router-link>
+    </div>
+  </div>
 
-  <router-link to="/admin/announcements" class="nav-item">
+  <router-link v-if="!isFinance && !isHR" to="/admin/announcements" class="nav-item">
     <i class="pi pi-megaphone"></i>
     <span v-if="!isCollapsed">Comunicados</span>
   </router-link>
 
-  <router-link to="/admin/documents" class="nav-item">
+  <router-link v-if="!isFinance" to="/admin/documents" class="nav-item">
     <i class="pi pi-file"></i>
     <span v-if="!isCollapsed">Documentos</span>
   </router-link>
   
-  <router-link to="/admin/users" class="nav-item">
+  <router-link v-if="!isFinance && !isHR" to="/admin/users" class="nav-item">
     <i class="pi pi-user-plus"></i>
     <span v-if="!isCollapsed">Utilizadores</span>
   </router-link>
@@ -63,13 +78,18 @@
     <span v-if="!isCollapsed">Folha Salarial</span>
   </router-link>
   
-  <router-link to="/admin/recruitment" class="nav-item">
+  <router-link v-if="!isFinance" to="/admin/recruitment" class="nav-item">
     <i class="pi pi-search-plus"></i>
     <span v-if="!isCollapsed">Recrutamento</span>
   </router-link>
 
+  <router-link v-if="!isFinance" to="/admin/reports" class="nav-item">
+    <i class="pi pi-chart-bar"></i>
+    <span v-if="!isCollapsed">Relatórios</span>
+  </router-link>
+
   <!-- ✅ MODIFICAR ESTA SEÇÃO - Adicionar submenu -->
-  <div class="nav-group">
+  <div v-if="isAttendanceEnabled" class="nav-group">
     <div class="nav-item-parent" @click="toggleSubmenu('attendance')">
       <div class="nav-item-content">
         <i class="pi pi-clock"></i>
@@ -88,15 +108,19 @@
         <span v-if="!isCollapsed">Justificativas</span>
         <span v-if="pendingJustifications > 0 && !isCollapsed" class="badge">{{ pendingJustifications }}</span>
       </router-link>
+      <router-link to="/admin/attendance/map" class="nav-item submenu-item">
+        <i class="pi pi-calendar"></i>
+        <span v-if="!isCollapsed">Mapa de Faltas</span>
+      </router-link>
     </div>
   </div>
 
-  <router-link to="/admin/work-schedules" class="nav-item">
+  <router-link v-if="!isFinance" to="/admin/work-schedules" class="nav-item">
     <i class="pi pi-calendar-clock"></i>
     <span v-if="!isCollapsed">Horários</span>
   </router-link>
   
-  <router-link to="/admin/settings" class="nav-item">
+  <router-link v-if="!isFinance && !isHR" to="/admin/settings" class="nav-item">
     <i class="pi pi-cog"></i>
     <span v-if="!isCollapsed">Configurações</span>
   </router-link>
@@ -114,9 +138,13 @@
     <main class="main-content">
       <header class="header">
         <div class="header-left">
+          <button class="mobile-menu-btn" @click="isMobileMenuOpen = true">
+            <i class="pi pi-bars"></i>
+          </button>
           <h2>{{ currentPageTitle }}</h2>
         </div>
         <div class="header-right">
+          <NotificationBell />
           <a href="/careers" target="_blank" class="careers-link" title="Portal de Vagas">
             <i class="pi pi-external-link"></i>
             <span>Portal Público</span>
@@ -137,32 +165,55 @@
       </header>
 
       <div class="content-body">
-        <slot>
-          <router-view v-slot="{ Component }">
-            <transition name="fade" mode="out-in">
-              <component :is="Component" />
-            </transition>
-          </router-view>
-        </slot>
+        <router-view v-slot="{ Component }">
+          <transition name="fade" mode="out-in">
+            <component :is="Component" />
+          </transition>
+        </router-view>
       </div>
     </main>
+
+    <!-- Logout Confirmation Modal -->
+    <div v-if="showLogoutModal" class="modal-overlay" @click="showLogoutModal = false">
+      <div class="modal-content logout-modal" @click.stop>
+        <div class="modal-icon">
+          <i class="pi pi-exclamation-triangle"></i>
+        </div>
+        <h3>Confirmar Saída</h3>
+        <p>Tem a certeza que deseja encerrar a sua sessão no sistema?</p>
+        <div class="modal-actions">
+          <button class="btn-cancel" @click="showLogoutModal = false">Cancelar</button>
+          <button class="btn-confirm" @click="confirmLogout">
+            <i class="pi pi-sign-out"></i>
+            Sair Agora
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import NotificationBell from '@/components/layout/NotificationBell.vue'
 import { adminService } from '@/services/adminService'
 
 const authStore = useAuthStore()
 const router = useRouter()
 const route = useRoute()
 
+const isAttendanceEnabled = computed(() => {
+  return authStore.company?.attendance_enabled !== false
+})
+
 
 const isCollapsed = ref(false)
+const isMobileMenuOpen = ref(false)
 const openSubmenus = ref({
-  attendance: false
+  attendance: route.path.startsWith('/admin/attendance'),
+  leaves: route.path.startsWith('/admin/leaves')
 })
 const pendingJustifications = ref(0)
 
@@ -205,21 +256,55 @@ const currentPageTitle = computed(() => {
     'AttendanceJustifications': 'Justificativas de Ponto', 
     'WorkSchedules': 'Horários de Trabalho',
     'Settings': 'Configurações da Empresa',
+    'AdminReports': 'Relatórios & Analytics',
   }
   return titles[route.name] || 'HR System'
 })
 const getRoleLabel = computed(() => {
-  if (authStore.isSuperAdmin) return 'Super Admin'
-  if (authStore.isAdmin) return 'Administrador'
-  return 'Utilizador'
+  const role = authStore.user?.roles?.[0]?.name
+  
+  const labels = {
+    'super-admin': 'Super Admin',
+    'admin': 'Administrador',
+    'manager': 'Gestor',
+    'finance': 'Financeiro',
+    'hr': 'Recursos Humanos',
+    'employee': 'Colaborador'
+  }
+
+  return labels[role] || 'Utilizador'
+})
+
+const isFinance = computed(() => {
+  // O cargo no DB é 'finance'
+  const roles = authStore.user?.roles || []
+  return roles.some(role => role.name === 'finance')
+})
+
+const isHR = computed(() => {
+  // O cargo no DB é 'hr'
+  const roles = authStore.user?.roles || []
+  return roles.some(role => role.name === 'hr')
+})
+
+// Close mobile menu on route change
+watch(() => route.path, (path) => {
+  isMobileMenuOpen.value = false
+  if (path.startsWith('/admin/attendance')) {
+    openSubmenus.value.attendance = true
+  }
 })
 
 
-const logout = async () => {
-  if (confirm('Tem certeza que deseja sair?')) {
-    await authStore.logout()
-    router.push('/login')
-  }
+const showLogoutModal = ref(false)
+
+const logout = () => {
+  showLogoutModal.value = true
+}
+
+const confirmLogout = async () => {
+  await authStore.logout()
+  router.push('/login')
 }
 </script>
 
@@ -278,6 +363,7 @@ const logout = async () => {
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  min-height: 70px;
 }
 
 .logo {
@@ -457,6 +543,16 @@ const logout = async () => {
   z-index: 10;
 }
 
+.mobile-menu-btn {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #1e293b;
+  cursor: pointer;
+  margin-right: 1rem;
+}
+
 .header-left h2 {
   font-size: 1.25rem;
   font-weight: 600;
@@ -546,15 +642,162 @@ const logout = async () => {
   opacity: 0;
 }
 
+@media (max-width: 1024px) {
+  .sidebar {
+    width: 80px;
+  }
+  .sidebar span, .sidebar .submenu-icon, .sidebar .toggle-btn {
+    display: none;
+  }
+}
+
 @media (max-width: 768px) {
+  .header {
+    padding: 0 1rem;
+  }
+
+  .header-right .careers-link span,
+  .header-right .user-info {
+    display: none;
+  }
+
+  .mobile-menu-btn {
+    display: block;
+  }
+
   .sidebar {
     position: fixed;
-    z-index: 100;
+    z-index: 1000;
     left: -260px;
+    width: 260px !important;
+    box-shadow: 10px 0 15px rgba(0,0,0,0.1);
+  }
+
+  .sidebar span, .sidebar .submenu-icon, .sidebar .toggle-btn {
+    display: inline;
   }
 
   .sidebar.mobile-open {
     left: 0;
+  }
+
+  .sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 999;
+    backdrop-filter: blur(2px);
+  }
+
+  .content-body {
+    padding: 1rem;
+  }
+}
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 1.5rem;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.logout-modal {
+  background: white;
+  padding: 2.5rem;
+  border-radius: 1.5rem;
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.modal-icon {
+  width: 64px;
+  height: 64px;
+  background: #fef2f2;
+  color: #ef4444;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.75rem;
+  margin: 0 auto 1.5rem;
+  border: 4px solid #fff1f2;
+}
+
+.logout-modal h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 0.75rem;
+}
+
+.logout-modal p {
+  color: #64748b;
+  margin-bottom: 2rem;
+  line-height: 1.5;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.modal-actions button {
+  flex: 1;
+  padding: 0.875rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.btn-cancel {
+  background: #f1f5f9;
+  border: none;
+  color: #475569;
+}
+
+.btn-cancel:hover {
+  background: #e2e8f0;
+}
+
+.btn-confirm {
+  background: #ef4444;
+  border: none;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.btn-confirm:hover {
+  background: #dc2626;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px) scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
   }
 }
 </style>

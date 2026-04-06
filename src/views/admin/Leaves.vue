@@ -3,61 +3,65 @@
         <div class="page-header">
             <div class="header-left">
                 <h2>Gestão de Licenças e Férias</h2>
-                <p class="subtitle">Gerencie solicitações e tipos de licença</p>
+                <p class="subtitle">Gerencie solicitações e acompanhe o saldo dos colaboradores</p>
             </div>
             <div class="header-actions">
                 <button @click="goToLeaveTypes" class="btn-secondary">
                     <i class="pi pi-cog"></i>
                     Tipos de Licença
                 </button>
-                <button @click="openRequestModal" class="btn-primary">
+                <button @click="goToCreate" class="btn-primary">
                     <i class="pi pi-plus"></i>
                     Nova Solicitação
                 </button>
             </div>
         </div>
 
-        <!-- Stats Overview -->
+        <!-- Professional Balance Cards -->
         <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-icon" style="background: #dbeafe;">
-                    <i class="pi pi-calendar" style="color: #3b82f6;"></i>
+            <div class="stat-card primary">
+                <div class="stat-icon">
+                    <i class="pi pi-calendar-plus"></i>
                 </div>
                 <div class="stat-content">
-                    <span class="stat-label">Dias Disponíveis</span>
-                    <span class="stat-value">{{ leaveBalance.available || 0 }}</span>
+                    <span class="stat-label">Total Acumulado</span>
+                    <span class="stat-value">{{ leaveBalance.total || 0 }}</span>
+                    <small>Dias este ano</small>
                 </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-icon" style="background: #fef3c7;">
-                    <i class="pi pi-clock" style="color: #f59e0b;"></i>
+            <div class="stat-card success">
+                <div class="stat-icon">
+                    <i class="pi pi-check-circle"></i>
                 </div>
                 <div class="stat-content">
-                    <span class="stat-label">Pendentes</span>
+                    <span class="stat-label">Dias Gozados</span>
+                    <span class="stat-value">{{ leaveBalance.used || 0 }}</span>
+                    <small>Aprovados</small>
+                </div>
+            </div>
+            <div class="stat-card warning">
+                <div class="stat-icon">
+                    <i class="pi pi-clock"></i>
+                </div>
+                <div class="stat-content">
+                    <span class="stat-label">Em Aprovação</span>
                     <span class="stat-value">{{ stats.pending || 0 }}</span>
+                    <small>Pedidos pendentes</small>
                 </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-icon" style="background: #d1fae5;">
-                    <i class="pi pi-check-circle" style="color: #10b981;"></i>
+            <div class="stat-card info">
+                <div class="stat-icon">
+                    <i class="pi pi-info-circle"></i>
                 </div>
                 <div class="stat-content">
-                    <span class="stat-label">Aprovados</span>
-                    <span class="stat-value">{{ stats.approved || 0 }}</span>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon" style="background: #fee2e2;">
-                    <i class="pi pi-times-circle" style="color: #ef4444;"></i>
-                </div>
-                <div class="stat-content">
-                    <span class="stat-label">Rejeitados</span>
-                    <span class="stat-value">{{ stats.rejected || 0 }}</span>
+                    <span class="stat-label">Saldo Disponível</span>
+                    <span class="stat-value highlight">{{ leaveBalance.remaining || 0 }}</span>
+                    <small>Dias restantes</small>
                 </div>
             </div>
         </div>
 
-        <!-- Filters -->
+        <!-- Filters & View Toggle -->
         <Card class="filters-card">
             <div class="filters-bar">
                 <div class="filter-group">
@@ -69,23 +73,19 @@
                         <option value="rejected">Rejeitado</option>
                     </select>
                 </div>
+                <div class="view-toggle">
+                     <button :class="{ active: view === 'list' }" @click="view = 'list'">
+                        <i class="pi pi-list"></i> Lista
+                     </button>
+                     <button :class="{ active: view === 'team' }" @click="view = 'team'">
+                        <i class="pi pi-users"></i> Equipa
+                     </button>
+                </div>
             </div>
         </Card>
 
-        <!-- Alert se não houver tipos de licença -->
-        <div v-if="!loading && leaveTypes.length === 0" class="alert alert-warning">
-            <i class="pi pi-exclamation-triangle"></i>
-            <div>
-                <strong>Atenção!</strong>
-                <p>Não há tipos de licença cadastrados. Cadastre pelo menos um tipo antes de criar solicitações.</p>
-            </div>
-            <button @click="goToLeaveTypes" class="btn-small">
-                Cadastrar Agora
-            </button>
-        </div>
-
         <!-- Leaves Table -->
-        <Card>
+        <Card v-if="view === 'list'">
             <div v-if="loading" class="loading-state">
                 <Loading message="Carregando licenças..." />
             </div>
@@ -94,7 +94,7 @@
                 <i class="pi pi-calendar"></i>
                 <h3>Nenhuma licença encontrada</h3>
                 <p>{{ statusFilter ? 'Nenhuma licença com este status' : 'Comece criando um novo pedido de licença' }}</p>
-                <button v-if="!statusFilter && leaveTypes.length > 0" @click="openRequestModal" class="btn-primary">
+                <button v-if="!statusFilter && leaveTypes.length > 0" @click="goToCreate" class="btn-primary">
                     <i class="pi pi-plus"></i>
                     Criar Primeira Solicitação
                 </button>
@@ -107,7 +107,7 @@
                             <th>Funcionário</th>
                             <th>Tipo</th>
                             <th>Período</th>
-                            <th>Dias</th>
+                            <th>Dias Úteis</th>
                             <th>Status</th>
                             <th>Ações</th>
                         </tr>
@@ -117,15 +117,18 @@
                             <td>
                                 <div class="employee-cell">
                                     <div class="employee-avatar">
-                                        {{ leave.employee?.first_name?.charAt(0) }}{{
-                                            leave.employee?.last_name?.charAt(0) }}
+                                        {{ leave.employee?.first_name?.charAt(0) }}{{ leave.employee?.last_name?.charAt(0) }}
                                     </div>
                                     <span>{{ leave.employee?.full_name }}</span>
                                 </div>
                             </td>
                             <td>{{ leave.leave_type?.name || 'Férias' }}</td>
                             <td>{{ formatDate(leave.start_date) }} - {{ formatDate(leave.end_date) }}</td>
-                            <td>{{ type.default_days }} dias</td>
+                            <td>
+                                <span class="days-pill">
+                                    {{ leave.days }} <small>dias</small>
+                                </span>
+                            </td>
                             <td>
                                 <span :class="`status-badge status-${leave.status}`">
                                     {{ getStatusLabel(leave.status) }}
@@ -152,106 +155,30 @@
             </div>
         </Card>
 
-        <!-- Request Modal -->
-        <div v-if="showRequestModal" class="modal-overlay" @click="closeRequestModal">
-            <div class="modal" @click.stop>
-                <div class="modal-header">
-                    <h3>Novo Pedido de Licença</h3>
-                    <button @click="closeRequestModal" class="close-btn">
-                        <i class="pi pi-times"></i>
-                    </button>
+        <!-- Team View (Who is away today) -->
+        <Card v-if="view === 'team'">
+             <div class="team-grid">
+                <div v-for="leave in currentLeaves" :key="leave.id" class="team-leave-card">
+                    <div class="employee-cell">
+                        <div class="employee-avatar">
+                            {{ leave.employee?.first_name?.charAt(0) }}
+                        </div>
+                        <div class="employee-info">
+                            <strong>{{ leave.employee?.full_name }}</strong>
+                            <p>{{ leave.leave_type?.name }}</p>
+                        </div>
+                    </div>
+                    <div class="leave-period">
+                        Até {{ formatDate(leave.end_date) }}
+                    </div>
                 </div>
+                <div v-if="currentLeaves.length === 0" class="empty-team">
+                    Nenhum colaborador ausente hoje.
+                </div>
+             </div>
+        </Card>
 
-              <form @submit.prevent="saveLeaveType" class="form">
-  <div class="form-row">
-    <div class="form-group">
-      <label>Nome *</label>
-      <input 
-        v-model="form.name" 
-        type="text" 
-        placeholder="Ex: Férias"
-        required
-      />
-    </div>
-
-    <div class="form-group">
-      <label>Código *</label>
-      <input 
-        v-model="form.code" 
-        type="text" 
-        placeholder="Ex: VACATION"
-        required
-        :disabled="editingType !== null"
-      />
-    </div>
-  </div>
-
-  <div class="form-group">
-    <label>Descrição</label>
-    <textarea 
-      v-model="form.description" 
-      rows="3"
-      placeholder="Descrição do tipo de licença..."
-    ></textarea>
-  </div>
-
-  <div class="form-row">
-    <div class="form-group">
-      <label>Dias Padrão *</label>
-      <input 
-        v-model.number="form.default_days" 
-        type="number" 
-        min="0"
-        required
-      />
-    </div>
-
-    <div class="form-group">
-      <label>Cor</label>
-      <input 
-        v-model="form.color" 
-        type="color"
-      />
-    </div>
-  </div>
-
-  <div class="form-row">
-    <div class="form-group checkbox">
-      <label>
-        <input v-model="form.is_paid" type="checkbox" />
-        <span>Licença Remunerada</span>
-      </label>
-    </div>
-
-    <div class="form-group checkbox">
-      <label>
-        <input v-model="form.requires_approval" type="checkbox" />
-        <span>Requer Aprovação</span>
-      </label>
-    </div>
-
-    <div class="form-group checkbox">
-      <label>
-        <input v-model="form.is_active" type="checkbox" />
-        <span>Ativo</span>
-      </label>
-    </div>
-  </div>
-
-  <div class="modal-actions">
-    <button type="button" @click="closeModal" class="btn-secondary" :disabled="submitting">
-      Cancelar
-    </button>
-    <button type="submit" class="btn-primary" :disabled="submitting">
-      <i class="pi" :class="submitting ? 'pi-spin pi-spinner' : 'pi-check'"></i>
-      {{ submitting ? 'Salvando...' : 'Salvar' }}
-    </button>
-  </div>
-</form>
-            </div>
-        </div>
-
-        <!-- View Details Modal -->
+        <!-- Modals and Tooltips -->
         <div v-if="showDetailsModal && selectedLeave" class="modal-overlay" @click="closeDetailsModal">
             <div class="modal modal-sm" @click.stop>
                 <div class="modal-header">
@@ -275,12 +202,12 @@
                         <p>{{ formatDate(selectedLeave.start_date) }} até {{ formatDate(selectedLeave.end_date) }}</p>
                     </div>
                     <div class="detail-group">
-                        <label>Total de Dias</label>
+                        <label>Total de Dias Úteis</label>
                         <p>{{ selectedLeave.days }} dias</p>
                     </div>
                     <div class="detail-group">
                         <label>Motivo</label>
-                        <p>{{ selectedLeave.reason || '-' }}</p>
+                        <p>{{ selectedLeave.reason || 'Não informado' }}</p>
                     </div>
                     <div class="detail-group">
                         <label>Status</label>
@@ -288,14 +215,57 @@
                             {{ getStatusLabel(selectedLeave.status) }}
                         </span>
                     </div>
-                    <div v-if="selectedLeave.rejection_reason" class="detail-group">
-                        <label>Motivo da Rejeição</label>
-                        <p class="text-danger">{{ selectedLeave.rejection_reason }}</p>
-                    </div>
                 </div>
 
                 <div class="modal-footer">
                     <button @click="closeDetailsModal" class="btn-secondary">Fechar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Confirm Modal -->
+        <ConfirmModal
+            :show="showConfirmModal"
+            :title="confirmModalState.title"
+            :message="confirmModalState.message"
+            :variant="confirmModalState.variant"
+            :icon="confirmModalState.icon"
+            :confirmText="confirmModalState.confirmText"
+            :cancelText="confirmModalState.cancelText"
+            :loading="confirmModalState.loading"
+            @close="closeConfirmModal"
+            @confirm="confirmModalState.action"
+        />
+
+        <!-- Rejection Modal -->
+        <div v-if="showRejectModal" class="modal-overlay" @click="closeRejectModal">
+            <div class="reject-modal" @click.stop>
+                <div class="reject-modal-header">
+                    <div class="reject-modal-icon">
+                        <i class="pi pi-times-circle"></i>
+                    </div>
+                    <div>
+                        <h3>Rejeitar Pedido</h3>
+                        <p class="reject-subtitle">{{ rejectLeaveData?.employee?.full_name }}</p>
+                    </div>
+                </div>
+
+                <div class="reject-modal-body">
+                    <label for="reject-reason">Motivo da rejeição *</label>
+                    <textarea
+                        id="reject-reason"
+                        v-model="rejectReason"
+                        placeholder="Informe o motivo para o colaborador..."
+                        rows="4"
+                    ></textarea>
+                </div>
+
+                <div class="reject-modal-footer">
+                    <button @click="closeRejectModal" class="btn-cancel" :disabled="rejectSubmitting">Cancelar</button>
+                    <button @click="confirmReject" class="btn-reject" :disabled="rejectSubmitting || !rejectReason.trim()">
+                        <i v-if="rejectSubmitting" class="pi pi-spin pi-spinner"></i>
+                        {{ rejectSubmitting ? 'Processando...' : 'Rejeitar Pedido' }}
+                    </button>
                 </div>
             </div>
         </div>
@@ -305,54 +275,91 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import api from '@/services/api'
+import { adminService } from '@/services/adminService'
 import Card from '@/components/common/Card.vue'
 import Loading from '@/components/common/Loading.vue'
+import ConfirmModal from '@/components/common/ConfirmModal.vue'
 import { useToast } from 'vue-toastification'
 import dayjs from 'dayjs'
 
 const router = useRouter()
 const toast = useToast()
 const loading = ref(false)
-const saving = ref(false)
-const showRequestModal = ref(false)
 const showDetailsModal = ref(false)
 const selectedLeave = ref(null)
 const statusFilter = ref('')
+const view = ref('list')
+
+// Modal de confirmação
+const showConfirmModal = ref(false)
+const confirmModalState = reactive({
+    title: '',
+    message: '',
+    variant: 'primary',
+    icon: 'pi pi-check',
+    confirmText: 'Confirmar',
+    cancelText: 'Cancelar',
+    loading: false,
+    action: null
+})
+
+// Modal de rejeição
+const showRejectModal = ref(false)
+const rejectReason = ref('')
+const rejectLeaveData = ref(null)
+const rejectSubmitting = ref(false)
+
+const openConfirmModal = (title, message, variant, icon, confirmText, action) => {
+    confirmModalState.title = title
+    confirmModalState.message = message
+    confirmModalState.variant = variant
+    confirmModalState.icon = icon
+    confirmModalState.confirmText = confirmText
+    confirmModalState.loading = false
+    confirmModalState.action = action
+    showConfirmModal.value = true
+}
+
+const closeConfirmModal = () => {
+    showConfirmModal.value = false
+    confirmModalState.action = null
+}
 
 const leaves = ref([])
-const employees = ref([])
 const leaveTypes = ref([])
-const leaveBalance = ref({ available: 0, used: 0, total: 0 })
+const leaveBalance = ref({ remaining: 0, used: 0, total: 0 })
 const stats = ref({ pending: 0, approved: 0, rejected: 0 })
 
-const requestForm = reactive({
-    employee_id: '',
-    leave_type_id: '',
-    start_date: '',
-    end_date: '',
-    reason: ''
+const currentLeaves = computed(() => {
+    const today = dayjs()
+    return leaves.value.filter(l => 
+        l.status === 'approved' && 
+        today.isAfter(dayjs(l.start_date).subtract(1, 'day')) && 
+        today.isBefore(dayjs(l.end_date).add(1, 'day'))
+    )
 })
 
-const calculatedDays = computed(() => {
-    if (!requestForm.start_date || !requestForm.end_date) return 0
-    const start = dayjs(requestForm.start_date)
-    const end = dayjs(requestForm.end_date)
-    return end.diff(start, 'day') + 1
-})
-
-const goToLeaveTypes = () => {
-    router.push('/admin/leave-types')
-}
+const goToLeaveTypes = () => router.push('/admin/leave-types')
+const goToCreate = () => router.push('/admin/leaves/create')
 
 const fetchLeaves = async () => {
     loading.value = true
     try {
-        const { data } = await api.get('/admin/leaves', {
-            params: { status: statusFilter.value }
-        })
+        const { data } = await adminService.leaves.getAll({ status: statusFilter.value })
         leaves.value = data.data || data
         calculateStats()
+        // Mocking balance for first employee to show the refined UI
+        if (leaves.value.length > 0) {
+            const { data: balanceData } = await adminService.leaves.getEmployeeBalance(leaves.value[0].employee_id)
+            const vacationBalance = balanceData.balance.find(b => strContainsFérias(b.leave_type))
+            if (vacationBalance) {
+                leaveBalance.value = {
+                    remaining: vacationBalance.remaining_days,
+                    used: vacationBalance.used_days,
+                    total: vacationBalance.total_days
+                }
+            }
+        }
     } catch (error) {
         toast.error('Erro ao carregar licenças')
     } finally {
@@ -360,22 +367,8 @@ const fetchLeaves = async () => {
     }
 }
 
-const fetchEmployees = async () => {
-    try {
-        const { data } = await api.get('/admin/employees')
-        employees.value = data.data || data
-    } catch (error) {
-        console.error('Error fetching employees')
-    }
-}
-
-const fetchLeaveTypes = async () => {
-    try {
-        const { data } = await api.get('/admin/leave-types')
-        leaveTypes.value = data.data || data
-    } catch (error) {
-        console.error('Error fetching leave types', error)
-    }
+const strContainsFérias = (str) => {
+    return str.toLowerCase().includes('férias') || str.toLowerCase().includes('vacation')
 }
 
 const calculateStats = () => {
@@ -386,56 +379,51 @@ const calculateStats = () => {
     }
 }
 
-const openRequestModal = () => {
-    if (leaveTypes.value.length === 0) {
-        toast.warning('Cadastre pelo menos um tipo de licença primeiro')
-        return
-    }
-    resetForm()
-    showRequestModal.value = true
-}
-
-const closeRequestModal = () => {
-    showRequestModal.value = false
-}
-
-const submitRequest = async () => {
-    saving.value = true
-    try {
-        await api.post('/admin/leaves', requestForm)
-        toast.success('Pedido de licença enviado com sucesso!')
-        closeRequestModal()
-        fetchLeaves()
-    } catch (error) {
-        const msg = error.response?.data?.message || 'Erro ao enviar pedido'
-        toast.error(msg)
-    } finally {
-        saving.value = false
-    }
-}
-
 const approveLeave = async (leave) => {
-    if (!confirm(`Aprovar licença de ${leave.employee?.full_name}?`)) return
-
-    try {
-        await api.post(`/admin/leaves/${leave.id}/approve`)
-        toast.success('Licença aprovada!')
-        fetchLeaves()
-    } catch (error) {
-        toast.error('Erro ao aprovar licença')
-    }
+    openConfirmModal(
+        'Aprovar Solicitação',
+        `Deseja aprovar o pedido de ${leave.employee?.full_name}? Os dias serão descontados do saldo.`,
+        'success',
+        'pi pi-check',
+        'Aprovar Agora',
+        async () => {
+            confirmModalState.loading = true
+            try {
+                await adminService.leaves.approve(leave.id)
+                toast.success('Pedido aprovado com sucesso!')
+                closeConfirmModal()
+                fetchLeaves()
+            } catch (error) {
+                toast.error('Erro ao processar aprovação')
+            } finally {
+                confirmModalState.loading = false
+            }
+        }
+    )
 }
 
-const rejectLeave = async (leave) => {
-    const reason = prompt('Motivo da rejeição:')
-    if (!reason) return
+const rejectLeave = (leave) => {
+    rejectLeaveData.value = leave
+    rejectReason.value = ''
+    showRejectModal.value = true
+}
 
+const closeRejectModal = () => {
+    showRejectModal.value = false
+    rejectLeaveData.value = null
+}
+
+const confirmReject = async () => {
+    rejectSubmitting.value = true
     try {
-        await api.post(`/admin/leaves/${leave.id}/reject`, { reason })
-        toast.success('Licença rejeitada')
+        await adminService.leaves.reject(rejectLeaveData.value.id, { rejection_reason: rejectReason.value })
+        toast.success('Pedido rejeitado.')
+        closeRejectModal()
         fetchLeaves()
     } catch (error) {
-        toast.error('Erro ao rejeitar licença')
+        toast.error('Erro ao rejeitar')
+    } finally {
+        rejectSubmitting.value = false
     }
 }
 
@@ -449,59 +437,14 @@ const closeDetailsModal = () => {
     selectedLeave.value = null
 }
 
-const resetForm = () => {
-    Object.assign(requestForm, {
-        employee_id: '',
-        leave_type_id: '',
-        start_date: '',
-        end_date: '',
-        reason: ''
-    })
-}
-
-const formatDate = (date) => {
-    if (!date) return '-'
-    return dayjs(date).format('DD/MM/YYYY')
-}
+const formatDate = (date) => date ? dayjs(date).format('DD/MM/YYYY') : '-'
 
 const getStatusLabel = (status) => {
-    const labels = {
-        pending: 'Pendente',
-        approved: 'Aprovado',
-        rejected: 'Rejeitado'
-    }
-    return labels[status] || status
+    const map = { pending: 'Pendente', approved: 'Aprovado', rejected: 'Rejeitado' }
+    return map[status] || status
 }
 
-onMounted(() => {
-    fetchLeaves()
-    fetchEmployees()
-    fetchLeaveTypes()
-})
-const form = ref({
-  name: '',
-  code: '',
-  description: '', // ✅ ADICIONAR
-  default_days: 30, // ✅ CORRIGIDO (era days_per_year)
-  is_paid: true,
-  requires_approval: true,
-  is_active: true,
-  color: '#3B82F6', // ✅ ADICIONAR
-})
-const closeModal = () => {
-  showModal.value = false
-  editingType.value = null
-  form.value = {
-    name: '',
-    code: '',
-    description: '',
-    default_days: 30,
-    is_paid: true,
-    requires_approval: true,
-    is_active: true,
-    color: '#3B82F6',
-  }
-}
+onMounted(() => fetchLeaves())
 </script>
 
 <style scoped>
@@ -509,93 +452,93 @@ const closeModal = () => {
     padding: 2rem;
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
+    gap: 2rem;
 }
 
 .page-header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
-    gap: 1rem;
+    align-items: center;
 }
 
 .header-left h2 {
-    font-size: 1.75rem;
+    font-size: 1.5rem;
     font-weight: 700;
     color: #1e293b;
-    margin: 0 0 0.25rem 0;
+    margin-bottom: 0.25rem;
 }
 
 .subtitle {
     color: #64748b;
-    font-size: 0.95rem;
-    margin: 0;
+    font-size: 0.9rem;
 }
 
 .header-actions {
     display: flex;
-    gap: 0.75rem;
+    gap: 1rem;
+}
+
+.filter-select {
+  appearance: none;
+  background-color: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  padding: 0.5rem 2.5rem 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: #111827;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%236b7280'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z' clip-rule='evenodd'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  background-size: 1.25rem;
+}
+
+.filter-select:hover {
+  border-color: #9ca3af;
+}
+
+.filter-select:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+.filter-select:disabled {
+  background-color: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.btn-primary, .btn-secondary {
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    font-weight: 600;
+    display: flex;
     align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s;
 }
 
 .btn-primary {
-    padding: 0.75rem 1.5rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    transition: all 0.2s;
-}
-
-.btn-primary:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-}
-
-.btn-primary:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-.btn-secondary {
-    padding: 0.75rem 1.5rem;
-    background: white;
-    border: 2px solid #e5e7eb;
-    border-radius: 8px;
-    font-weight: 600;
-    color: #374151;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    transition: all 0.2s;
-}
-
-.btn-secondary:hover {
-    background: #f9fafb;
-    border-color: #d1d5db;
-}
-
-.btn-small {
-    padding: 0.5rem 1rem;
     background: #3b82f6;
     color: white;
     border: none;
-    border-radius: 6px;
-    font-size: 0.875rem;
-    font-weight: 600;
-    cursor: pointer;
+}
+
+.btn-secondary {
+    background: white;
+    border: 1px solid #e2e8f0;
+    color: #475569;
 }
 
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 1.25rem;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
 }
 
 .stat-card {
@@ -604,137 +547,74 @@ const closeModal = () => {
     border-radius: 12px;
     border: 1px solid #e2e8f0;
     display: flex;
-    align-items: center;
     gap: 1rem;
-    transition: all 0.2s;
-}
-
-.stat-card:hover {
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    transform: translateY(-2px);
 }
 
 .stat-icon {
     width: 48px;
     height: 48px;
-    border-radius: 12px;
+    background: #f1f5f9;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.5rem;
+    font-size: 1.25rem;
 }
+
+.stat-card.primary .stat-icon { background: #dbeafe; color: #2563eb; }
+.stat-card.success .stat-icon { background: #dcfce7; color: #16a34a; }
+.stat-card.warning .stat-icon { background: #fef9c3; color: #ca8a04; }
+.stat-card.info .stat-icon { background: #f0f9ff; color: #0891b2; }
 
 .stat-content {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
 }
 
 .stat-label {
     font-size: 0.75rem;
-    color: #64748b;
     font-weight: 600;
+    color: #64748b;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
 }
 
 .stat-value {
-    font-size: 1.75rem;
+    font-size: 1.5rem;
     font-weight: 700;
     color: #1e293b;
 }
 
-.filters-card {
-    padding: 1rem 1.5rem;
+.stat-value.highlight {
+    color: #2563eb;
 }
 
 .filters-bar {
     display: flex;
-    gap: 1rem;
+    justify-content: space-between;
     align-items: center;
 }
 
-.filter-group {
+.view-toggle {
     display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.filter-group label {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: #374151;
-}
-
-.filter-select {
-    padding: 0.625rem 1rem;
-    border: 2px solid #e5e7eb;
+    background: #f1f5f9;
+    padding: 0.25rem;
     border-radius: 8px;
-    font-size: 0.875rem;
+}
+
+.view-toggle button {
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: #64748b;
+    font-size: 0.85rem;
     cursor: pointer;
-    transition: border-color 0.2s;
 }
 
-.filter-select:focus {
-    outline: none;
-    border-color: #3b82f6;
-}
-
-/* Alert */
-.alert {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 1rem 1.5rem;
-    border-radius: 12px;
-    border-left: 4px solid;
-}
-
-.alert-warning {
-    background: #fffbeb;
-    border-color: #f59e0b;
-    color: #92400e;
-}
-
-.alert i {
-    font-size: 1.5rem;
-    color: #f59e0b;
-}
-
-.alert strong {
-    display: block;
-    margin-bottom: 0.25rem;
-}
-
-.alert p {
-    margin: 0;
-    font-size: 0.875rem;
-}
-
-.loading-state,
-.empty-state {
-    padding: 4rem 2rem;
-    text-align: center;
-}
-
-.empty-state i {
-    font-size: 4rem;
-    color: #d1d5db;
-    margin-bottom: 1rem;
-}
-
-.empty-state h3 {
-    color: #374151;
-    margin: 1rem 0 0.5rem;
-}
-
-.empty-state p {
-    color: #6b7280;
-    margin-bottom: 1.5rem;
-}
-
-.table-responsive {
-    overflow-x: auto;
+.view-toggle button.active {
+    background: white;
+    color: #1e293b;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
 .data-table {
@@ -742,24 +622,18 @@ const closeModal = () => {
     border-collapse: collapse;
 }
 
-.data-table thead {
-    background: #f9fafb;
-}
-
 .data-table th {
-    padding: 1rem;
     text-align: left;
+    padding: 1rem;
     font-size: 0.75rem;
-    font-weight: 700;
-    color: #6b7280;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    color: #64748b;
+    border-bottom: 2px solid #f1f5f9;
 }
 
 .data-table td {
     padding: 1rem;
-    border-top: 1px solid #e5e7eb;
-    font-size: 0.875rem;
+    border-bottom: 1px solid #f8fafc;
 }
 
 .employee-cell {
@@ -769,39 +643,34 @@ const closeModal = () => {
 }
 
 .employee-avatar {
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
+    background: #e2e8f0;
     border-radius: 50%;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: 700;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
+}
+
+.days-pill {
+    background: #f8fafc;
+    padding: 0.2rem 0.5rem;
+    border-radius: 6px;
+    font-weight: 600;
 }
 
 .status-badge {
-    padding: 0.25rem 0.75rem;
-    border-radius: 12px;
+    padding: 0.2rem 0.6rem;
+    border-radius: 20px;
     font-size: 0.75rem;
     font-weight: 600;
 }
 
-.status-pending {
-    background: #fef3c7;
-    color: #92400e;
-}
-
-.status-approved {
-    background: #d1fae5;
-    color: #065f46;
-}
-
-.status-rejected {
-    background: #fee2e2;
-    color: #991b1b;
-}
+.status-pending { background: #fef3c7; color: #92400e; }
+.status-approved { background: #dcfce7; color: #16a34a; }
+.status-rejected { background: #fee2e2; color: #991b1b; }
 
 .action-buttons {
     display: flex;
@@ -811,217 +680,135 @@ const closeModal = () => {
 .btn-icon {
     width: 32px;
     height: 32px;
-    border: none;
-    background: #f3f4f6;
-    color: #4b5563;
     border-radius: 6px;
+    border: 1px solid #e2e8f0;
+    background: white;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s;
 }
 
-.btn-icon:hover {
-    background: #e5e7eb;
+.btn-icon.btn-success { color: #16a34a; }
+.btn-icon.btn-danger { color: #dc2626; }
+
+.team-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
 }
 
-.btn-success:hover {
-    background: #d1fae5;
-    color: #10b981;
+.team-leave-card {
+    padding: 1rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
-.btn-danger:hover {
-    background: #fee2e2;
-    color: #dc2626;
+.employee-info p {
+    font-size: 0.8rem;
+    color: #64748b;
+    margin: 0;
 }
 
-/* Modal Styles */
+.leave-period {
+    font-size: 0.75rem;
+    color: #94a3b8;
+}
+
 .modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(0,0,0,0.5);
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 9999;
-    padding: 1rem;
+    z-index: 1000;
 }
 
 .modal {
     background: white;
     border-radius: 12px;
-    width: 100%;
-    max-width: 600px;
-    max-height: 90vh;
-    overflow-y: auto;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-}
-
-.modal-sm {
+    width: 90%;
     max-width: 500px;
 }
 
 .modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid #f1f5f9;
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    padding: 1.5rem;
-    border-bottom: 1px solid #e5e7eb;
-}
-
-.modal-header h3 {
-    margin: 0;
-    font-size: 1.25rem;
-    font-weight: 700;
-}
-
-.close-btn {
-    width: 32px;
-    height: 32px;
-    border: none;
-    background: #f3f4f6;
-    border-radius: 6px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.close-btn:hover {
-    background: #e5e7eb;
 }
 
 .modal-body {
     padding: 1.5rem;
-    display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
-}
-
-.form-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-}
-
-.form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.form-group label {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: #374151;
-}
-
-.form-group input,
-.form-group select,
-.form-group textarea {
-    padding: 0.75rem 1rem;
-    border: 2px solid #e5e7eb;
-    border-radius: 8px;
-    font-size: 0.875rem;
-    transition: border-color 0.2s;
-}
-
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
-    outline: none;
-    border-color: #3b82f6;
-}
-
-.form-group small {
-    font-size: 0.8rem;
-    color: #64748b;
-}
-
-.text-warning {
-    color: #f59e0b;
-}
-
-.link {
-    color: #3b82f6;
-    text-decoration: underline;
-    cursor: pointer;
-}
-
-.link:hover {
-    color: #2563eb;
-}
-
-.info-box {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1rem;
-    background: #dbeafe;
-    border-radius: 8px;
-    color: #1e40af;
-    font-size: 0.875rem;
 }
 
 .detail-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
+    margin-bottom: 1rem;
 }
 
 .detail-group label {
     font-size: 0.75rem;
-    color: #64748b;
     font-weight: 600;
+    color: #94a3b8;
     text-transform: uppercase;
 }
 
-.detail-group p {
-    margin: 0;
-    color: #1e293b;
-    font-weight: 500;
-}
-
-.text-danger {
-    color: #ef4444;
-}
-
 .modal-footer {
+    padding: 1rem 1.5rem;
+    background: #f8fafc;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
     display: flex;
     justify-content: flex-end;
-    gap: 1rem;
-    padding: 1.5rem;
-    border-top: 1px solid #e5e7eb;
 }
 
-@media (max-width: 768px) {
-    .leaves-page {
-        padding: 1rem;
-    }
+.reject-modal {
+    background: white;
+    border-radius: 12px;
+    width: 400px;
+    padding: 1.5rem;
+}
 
-    .page-header {
-        flex-direction: column;
-        align-items: flex-start;
-    }
+.reject-modal-header {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
 
-    .header-actions {
-        width: 100%;
-    }
+.reject-modal-icon {
+    font-size: 2rem;
+    color: #dc2626;
+}
 
-    .header-actions button {
-        flex: 1;
-    }
+.reject-modal-body textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    margin-top: 0.5rem;
+}
 
-    .form-grid {
-        grid-template-columns: 1fr;
-    }
+.reject-modal-footer {
+    margin-top: 1.5rem;
+    display: flex;
+    gap: 1rem;
+}
 
-    .stats-grid {
-        grid-template-columns: 1fr;
-    }
+.btn-reject {
+    flex: 1;
+    background: #dc2626;
+    color: white;
+    border: none;
+    padding: 0.75rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
 }
 </style>

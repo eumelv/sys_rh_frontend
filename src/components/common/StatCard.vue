@@ -41,7 +41,7 @@ const formattedValue = computed(() => {
         return new Intl.NumberFormat('pt-AO', {
             style: 'currency',
             currency: 'AOA'
-        }).format(props.value / 100)
+        }).format(props.value)
     }
 
     if (props.format === 'number' && typeof props.value === 'number') {

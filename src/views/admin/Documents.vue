@@ -6,428 +6,347 @@
         <div class="header-title">
           <i class="pi pi-file"></i>
           <div>
-            <h1>Documentos</h1>
-            <p class="subtitle">Gerencie documentos e categorias</p>
+            <h1>Centro de Documentação</h1>
+            <p class="subtitle">Gestão centralizada de arquivos, contratos e conformidade</p>
           </div>
         </div>
         <div class="header-actions">
-          <button @click="showCategoryModal = true" class="btn-secondary">
+           <div class="pending-badge" v-if="stats.pending > 0" title="Documentos aguardando revisão">
+            <i class="pi pi-info-circle"></i>
+            {{ stats.pending }} Pendentes
+          </div>
+          <button @click="showTypeModal = true" class="btn-secondary">
             <i class="pi pi-tag"></i>
-            Categorias
+            Tipos
           </button>
           <button @click="openUploadModal" class="btn-primary">
             <i class="pi pi-upload"></i>
-            Enviar Documento
+            Novo Documento
           </button>
         </div>
       </div>
     </div>
 
-    <!-- Stats -->
+    <!-- Stats Analytics -->
     <div class="stats-grid">
-      <div class="stat-card">
+      <div class="stat-card" @click="filterByStatus('')">
         <div class="stat-icon total">
           <i class="pi pi-file"></i>
         </div>
         <div class="stat-info">
-          <span class="stat-label">Total de Documentos</span>
-          <span class="stat-value">{{ documents.length }}</span>
+          <span class="stat-label">Total de Arquivos</span>
+          <span class="stat-value">{{ stats.total }}</span>
         </div>
       </div>
 
-      <div class="stat-card">
+      <div class="stat-card" @click="filterByStatus('active')">
         <div class="stat-icon active">
           <i class="pi pi-check-circle"></i>
         </div>
         <div class="stat-info">
-          <span class="stat-label">Ativos</span>
-          <span class="stat-value">{{ activeCount }}</span>
+          <span class="stat-label">Documentos Ativos</span>
+          <span class="stat-value">{{ stats.active }}</span>
         </div>
       </div>
 
-      <div class="stat-card">
-        <div class="stat-icon categories">
-          <i class="pi pi-tag"></i>
+      <div class="stat-card warning" @click="filterByStatus('expiring_soon')">
+        <div class="stat-icon expiring">
+          <i class="pi pi-clock"></i>
         </div>
         <div class="stat-info">
-          <span class="stat-label">Categorias</span>
-          <span class="stat-value">{{ categories.length }}</span>
+          <span class="stat-label">Vencimento Próximo</span>
+          <span class="stat-value">{{ stats.expiring_soon }}</span>
         </div>
       </div>
 
-      <div class="stat-card">
-        <div class="stat-icon size">
-          <i class="pi pi-database"></i>
+      <div class="stat-card danger" @click="filterByStatus('expired')">
+        <div class="stat-icon expired">
+          <i class="pi pi-exclamation-triangle"></i>
         </div>
         <div class="stat-info">
-          <span class="stat-label">Espaço Usado</span>
-          <span class="stat-value">{{ totalSize }}</span>
+          <span class="stat-label">Documentos Expirados</span>
+          <span class="stat-value">{{ stats.expired }}</span>
         </div>
       </div>
     </div>
 
-    <!-- Filters -->
-    <div class="filters-card">
-      <div class="filters-row">
-        <div class="filter-group">
-          <label>Categoria</label>
-          <select v-model="filters.category_id" @change="applyFilters" class="filter-select">
-            <option value="">Todas as Categorias</option>
-            <option v-for="cat in categories" :key="cat.id" :value="cat.id">
-              {{ cat.name }}
-            </option>
-          </select>
+    <div class="main-layout">
+      <!-- Sidebar Filters (Professional File Explorer feel) -->
+      <aside class="doc-sidebar">
+        <div class="sidebar-section">
+          <h3>Categorias</h3>
+          <ul class="category-list">
+            <li :class="{ active: !filters.category_id }" @click="selectCategory('')">
+              <i class="pi pi-folder"></i> Todos os Documentos
+            </li>
+            <li v-for="cat in categories" :key="cat.id" 
+                :class="{ active: filters.category_id === cat.id }"
+                @click="selectCategory(cat.id)">
+              <i class="pi pi-folder-open"></i> {{ cat.name }}
+            </li>
+          </ul>
         </div>
 
-        <div class="filter-group">
-          <label>Status</label>
-          <select v-model="filters.is_active" @change="applyFilters" class="filter-select">
-            <option value="">Todos</option>
-            <option value="true">Ativos</option>
-            <option value="false">Inativos</option>
-          </select>
-        </div>
-
-        <div class="filter-group">
-          <label>Buscar</label>
-          <div class="search-input">
-            <i class="pi pi-search"></i>
-            <input 
-              v-model="filters.search" 
-              @input="debouncedFetch"
-              type="text" 
-              placeholder="Buscar documentos..."
-            />
+        <div class="sidebar-section">
+          <h3>Filtros Rápidos</h3>
+          <div class="quick-filters">
+            <div class="q-filter" :class="{ active: filters.status === 'pending' }" @click="filterByStatus('pending')">
+               <i class="pi pi-clock"></i> Pendentes de Revisão
+            </div>
+             <div class="q-filter" :class="{ active: filters.visibility === 'private' }" @click="toggleVisibilityFilter('private')">
+               <i class="pi pi-lock"></i> Acesso Restrito
+            </div>
           </div>
         </div>
-      </div>
-    </div>
+      </aside>
 
-    <!-- Loading -->
-    <div v-if="loading" class="loading-state">
-      <i class="pi pi-spin pi-spinner"></i>
-      <p>Carregando documentos...</p>
-    </div>
-
-    <!-- Empty State -->
-    <div v-else-if="documents.length === 0" class="empty-state">
-      <i class="pi pi-file"></i>
-      <h3>Nenhum documento encontrado</h3>
-      <p>Comece enviando documentos para os colaboradores</p>
-      <button @click="openUploadModal" class="btn-primary">
-        <i class="pi pi-upload"></i>
-        Enviar Primeiro Documento
-      </button>
-    </div>
-
-    <!-- Documents Grid -->
-    <div v-else class="documents-grid">
-      <div 
-        v-for="doc in documents" 
-        :key="doc.id"
-        class="document-card"
-        @click="viewDocument(doc)"
-      >
-        <div class="document-icon">
-          <i :class="getFileIcon(doc.file_type)"></i>
+      <!-- Content Area -->
+      <main class="doc-content">
+        <div class="content-header">
+           <div class="search-box">
+             <i class="pi pi-search"></i>
+             <input v-model="filters.search" @input="debouncedFetch" placeholder="Pesquisar por nome, funcionário ou tipo..." />
+           </div>
         </div>
 
-        <div class="document-info">
-          <h4>{{ doc.title }}</h4>
-          <p v-if="doc.description">{{ getPreview(doc.description) }}</p>
+        <div v-if="loading" class="loading-area">
+          <Loading />
+        </div>
+
+        <div v-else-if="documents.length === 0" class="empty-area">
+          <i class="pi pi-file-o"></i>
+          <h3>Nenhum arquivo encontrado</h3>
+          <p>Tente ajustar os filtros ou pesquisar por outro termo.</p>
+        </div>
+
+        <div v-else class="documents-grid">
+          <div v-for="doc in documents" :key="doc.id" class="doc-item-card" :class="{ 'is-pending': doc.status === 'pending' }">
+             <div class="doc-item-header">
+                <div class="doc-type-icon">
+                  <i :class="getFileIcon(doc.file_type)"></i>
+                </div>
+                <div class="doc-status">
+                   <span :class="statusBadgeClass(doc.status)">{{ getStatusLabel(doc.status) }}</span>
+                </div>
+             </div>
+             
+             <div class="doc-item-body">
+                <h4 :title="doc.title">{{ truncate(doc.title, 40) }}</h4>
+                <div class="doc-metadata">
+                   <span class="meta-tag">{{ doc.type?.name || 'Geral' }}</span>
+                   <span class="meta-size">{{ doc.file_size_formatted }}</span>
+                </div>
+                <p v-if="doc.employee" class="doc-owner">
+                  <i class="pi pi-user"></i> {{ doc.employee.full_name }}
+                </p>
+                <div v-if="doc.expiration_date" class="doc-timer" :class="expiryClass(doc)">
+                   <i class="pi pi-calendar"></i> {{ formatDate(doc.expiration_date) }}
+                </div>
+             </div>
+
+             <div class="doc-item-footer">
+                <div class="visibility-info">
+                   <i :class="getVisibilityIcon(doc.visibility)"></i>
+                   <small>{{ getVisibilityLabel(doc.visibility) }}</small>
+                </div>
+                <div class="item-actions">
+                   <button @click="viewDocument(doc)" class="btn-icon" title="Ver Detalhes"><i class="pi pi-eye"></i></button>
+                   <button @click="downloadDocument(doc)" class="btn-icon primary" title="Download"><i class="pi pi-download"></i></button>
+                   <button @click="editDocument(doc)" class="btn-icon" title="Editar"><i class="pi pi-pencil"></i></button>
+                   <button @click="deleteDocument(doc)" class="btn-icon danger" title="Eliminar"><i class="pi pi-trash"></i></button>
+                </div>
+             </div>
+          </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination-bar" v-if="pagination.last_page > 1">
+           <button :disabled="pagination.current_page === 1" @click="changePage(pagination.current_page - 1)">Ant</button>
+           <span>{{ pagination.current_page }} / {{ pagination.last_page }}</span>
+           <button :disabled="pagination.current_page === pagination.last_page" @click="changePage(pagination.current_page + 1)">Próx</button>
+        </div>
+      </main>
+    </div>
+
+    <!-- Multi-step Upload Modal -->
+    <div v-if="showModal" class="modal-overlay" @click="closeModal">
+       <div class="modal modal-lg" @click.stop>
+          <div class="modal-header">
+             <h2>{{ editingDocument ? 'Editar Propriedades' : 'Carregar Novo Documento' }}</h2>
+             <button @click="closeModal" class="close-btn"><i class="pi pi-times"></i></button>
+          </div>
           
-          <div class="document-meta">
-            <span class="category-badge">
-              <i class="pi pi-tag"></i>
-              {{ doc.category?.name }}
-            </span>
-            <span class="size-badge">
-              <i class="pi pi-file"></i>
-              {{ doc.file_size_formatted }}
-            </span>
-          </div>
+          <form @submit.prevent="saveDocument" class="modal-body">
+             <div class="upload-form-grid">
+                <div class="form-section">
+                   <label>Arquivo do Documento *</label>
+                   <div class="file-dropzone" @click="$refs.fileInput.click()">
+                      <input type="file" ref="fileInput" @change="handleFileSelect" hidden />
+                      <div v-if="form.file" class="file-info-selected">
+                         <i class="pi pi-file-pdf"></i>
+                         <span>{{ form.file.name }}</span>
+                         <small>{{ formatFileSize(form.file.size) }}</small>
+                      </div>
+                      <div v-else class="file-prompt">
+                         <i class="pi pi-cloud-upload"></i>
+                         <p>Clique ou arraste o arquivo aqui</p>
+                         <small>Suporta PDF, DOCX, XLSX e Imagens (máx 10MB)</small>
+                      </div>
+                   </div>
+                </div>
 
-          <div class="document-access">
-            <i class="pi pi-users"></i>
-            <span>{{ getAccessLabel(doc) }}</span>
-          </div>
-        </div>
+                <div class="fields-section">
+                   <div class="field-row">
+                      <div class="input-group">
+                        <label>Título Informativo *</label>
+                        <input v-model="form.title" type="text" placeholder="Ex: Contrato de Trabalho - [Nome]" required />
+                      </div>
+                   </div>
 
-        <div class="document-actions" @click.stop>
-          <button @click="editDocument(doc)" class="btn-icon" title="Editar">
-            <i class="pi pi-pencil"></i>
-          </button>
-          <button @click="downloadDocument(doc)" class="btn-icon" title="Download">
-            <i class="pi pi-download"></i>
-          </button>
-          <button @click="deleteDocument(doc)" class="btn-icon btn-danger" title="Excluir">
-            <i class="pi pi-trash"></i>
-          </button>
-        </div>
+                   <div class="field-row double">
+                      <div class="input-group">
+                        <label>Categoria</label>
+                        <select v-model="form.category_id">
+                           <option value="">Selecione...</option>
+                           <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+                        </select>
+                      </div>
+                      <div class="input-group">
+                        <label>Tipo de Documento</label>
+                        <select v-model="form.type_id">
+                           <option value="">Selecione...</option>
+                           <option v-for="t in types" :key="t.id" :value="t.id">{{ t.name }}</option>
+                        </select>
+                      </div>
+                   </div>
 
-        <div v-if="!doc.is_active" class="inactive-overlay">
-          <span>Inativo</span>
-        </div>
-      </div>
-    </div>
+                   <div class="field-row double">
+                      <div class="input-group">
+                        <label>Colaborador Associado</label>
+                        <select v-model="form.employee_id">
+                           <option value="">Documento Geral da Empresa</option>
+                           <option v-for="emp in employees" :key="emp.id" :value="emp.id">{{ emp.full_name }}</option>
+                        </select>
+                      </div>
+                      <div class="input-group">
+                        <label>Visibilidade</label>
+                        <select v-model="form.visibility">
+                           <option value="internal">Interno (RH + Colaborador)</option>
+                           <option value="hr">Apenas RH</option>
+                           <option value="manager">Gestores e RH</option>
+                           <option value="private">Privado (Administrador)</option>
+                        </select>
+                      </div>
+                   </div>
 
-    <!-- Modal Upload -->
-    <div v-if="showUploadModal" class="modal-overlay" @click="closeUploadModal">
-      <div class="modal-content modal-large" @click.stop>
-        <div class="modal-header">
-          <h2>{{ editingDocument ? 'Editar Documento' : 'Enviar Documento' }}</h2>
-          <button class="btn-close" @click="closeUploadModal">
-            <i class="pi pi-times"></i>
-          </button>
-        </div>
+                   <div class="field-row">
+                      <div class="input-group">
+                        <label>Data de Vencimento (se aplicável)</label>
+                        <input v-model="form.expiration_date" type="date" />
+                      </div>
+                   </div>
+                </div>
+             </div>
 
-        <form @submit.prevent="saveDocument" class="modal-body">
-          <div v-if="!editingDocument" class="form-group">
-            <label>Arquivo *</label>
-            <div class="file-input-wrapper">
-              <input 
-                ref="fileInput"
-                type="file" 
-                @change="handleFileChange"
-                accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png"
-                required
-              />
-              <div v-if="selectedFile" class="selected-file">
-                <i :class="getFileIcon(selectedFile.name.split('.').pop())"></i>
-                <span>{{ selectedFile.name }}</span>
-                <button type="button" @click="clearFile" class="btn-remove">
-                  <i class="pi pi-times"></i>
+             <div class="modal-footer">
+                <button type="button" @click="closeModal" class="btn-secondary">Cancelar</button>
+                <button type="submit" class="btn-primary" :disabled="saving">
+                   <i v-if="saving" class="pi pi-spin pi-spinner"></i>
+                   {{ editingDocument ? 'Atualizar Metadados' : 'Concluir Envio' }}
                 </button>
-              </div>
-            </div>
-            <small>Formatos aceitos: PDF, Word, Excel, PowerPoint, Imagens (Max: 10MB)</small>
-          </div>
-
-          <div class="form-group">
-            <label>Título *</label>
-            <input 
-              v-model="form.title" 
-              type="text" 
-              placeholder="Nome do documento..."
-              required
-              maxlength="255"
-            />
-          </div>
-
-          <div class="form-group">
-            <label>Categoria *</label>
-            <select v-model="form.category_id" required>
-              <option value="">Selecione uma categoria</option>
-              <option v-for="cat in categories" :key="cat.id" :value="cat.id">
-                {{ cat.name }}
-              </option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label>Descrição</label>
-            <textarea 
-              v-model="form.description" 
-              rows="3"
-              placeholder="Descrição opcional do documento..."
-            ></textarea>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label>Nível de Acesso *</label>
-              <select v-model="form.access_level" @change="clearAccessIds" required>
-                <option value="all">Todos os Colaboradores</option>
-                <option value="department">Departamentos Específicos</option>
-                <option value="position">Cargos Específicos</option>
-                <option value="specific">Colaboradores Específicos</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label>Status</label>
-              <select v-model="form.is_active">
-                <option :value="true">Ativo</option>
-                <option :value="false">Inativo</option>
-              </select>
-            </div>
-          </div>
-
-          <div v-if="form.access_level === 'department'" class="form-group">
-            <label>Selecionar Departamentos *</label>
-            <div class="checkbox-group">
-              <label v-for="dept in departments" :key="dept.id" class="checkbox-label">
-                <input type="checkbox" :value="dept.id" v-model="form.access_ids" />
-                <span>{{ dept.name }}</span>
-              </label>
-            </div>
-          </div>
-
-          <div v-if="form.access_level === 'position'" class="form-group">
-            <label>Selecionar Cargos *</label>
-            <div class="checkbox-group">
-              <label v-for="pos in positions" :key="pos.id" class="checkbox-label">
-                <input type="checkbox" :value="pos.id" v-model="form.access_ids" />
-                <span>{{ pos.title }}</span>
-              </label>
-            </div>
-          </div>
-
-          <div v-if="form.access_level === 'specific'" class="form-group">
-            <label>Selecionar Colaboradores *</label>
-            <div class="checkbox-group">
-              <label v-for="emp in employees" :key="emp.id" class="checkbox-label">
-                <input type="checkbox" :value="emp.user_id" v-model="form.access_ids" />
-                <span>{{ emp.user?.name }} - {{ emp.department?.name }}</span>
-              </label>
-            </div>
-          </div>
-
-          <div class="modal-footer">
-            <button type="button" @click="closeUploadModal" class="btn-secondary" :disabled="uploading">
-              Cancelar
-            </button>
-            <button type="submit" class="btn-primary" :disabled="uploading">
-              <i class="pi" :class="uploading ? 'pi-spin pi-spinner' : 'pi-upload'"></i>
-              {{ uploading ? 'Enviando...' : editingDocument ? 'Atualizar' : 'Enviar' }}
-            </button>
-          </div>
-        </form>
-      </div>
+             </div>
+          </form>
+       </div>
     </div>
 
-    <!-- Modal Categories -->
-    <div v-if="showCategoryModal" class="modal-overlay" @click="showCategoryModal = false">
-      <div class="modal-content" @click.stop>
-        <div class="modal-header">
-          <h2>Gerenciar Categorias</h2>
-          <button class="btn-close" @click="showCategoryModal = false">
-            <i class="pi pi-times"></i>
-          </button>
-        </div>
-
-        <div class="modal-body">
-       <form @submit.prevent="saveCategory" class="category-form">
-  <div class="form-group">
-    <label>{{ editingCategory ? 'Editar Categoria' : 'Nova Categoria' }}</label>
-    <div class="category-inputs">
-      <input 
-        v-model="categoryForm.name" 
-        type="text" 
-        placeholder="Nome da categoria..."
-        required
-        class="category-name-input"
-      />
-      <input 
-        v-model="categoryForm.description" 
-        type="text" 
-        placeholder="Descrição (opcional)..."
-        class="category-desc-input"
-      />
-      <div class="category-buttons">
-        <button type="submit" class="btn-add" :disabled="savingCategory">
-          <i class="pi" :class="savingCategory ? 'pi-spin pi-spinner' : editingCategory ? 'pi-check' : 'pi-plus'"></i>
-        </button>
-        <button 
-          v-if="editingCategory" 
-          type="button" 
-          @click="cancelEditCategory" 
-          class="btn-cancel"
-        >
-          <i class="pi pi-times"></i>
-        </button>
-      </div>
-    </div>
-  </div>
-</form>
-
-          <div class="categories-list">
-            <div v-if="categories.length === 0" class="empty-categories">
-              <p>Nenhuma categoria cadastrada</p>
-            </div>
-            <div 
-              v-else
-              v-for="cat in categories" 
-              :key="cat.id"
-              class="category-item"
-            >
-              <div class="category-info">
-                <i class="pi pi-tag"></i>
-                <span>{{ cat.name }}</span>
-                <span class="category-count">({{ cat.documents_count || 0 }})</span>
-              </div>
-              <div class="category-actions">
-                <button @click="editCategory(cat)" class="btn-icon">
-                  <i class="pi pi-pencil"></i>
-                </button>
-                <button @click="deleteCategory(cat)" class="btn-icon btn-danger">
-                  <i class="pi pi-trash"></i>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Modal View -->
+    <!-- View Modal (with expanded details) -->
     <div v-if="showViewModal && selectedDocument" class="modal-overlay" @click="closeViewModal">
-      <div class="modal-content" @click.stop>
-        <div class="modal-header">
-          <h2>{{ selectedDocument.title }}</h2>
-          <button class="btn-close" @click="closeViewModal">
-            <i class="pi pi-times"></i>
-          </button>
+        <div class="modal modal-md" @click.stop>
+            <div class="modal-header">
+                <h3>Visualizar Documento</h3>
+                <button @click="closeViewModal" class="close-btn"><i class="pi pi-times"></i></button>
+            </div>
+            <div class="modal-body doc-view-body">
+                <div class="doc-icon-large">
+                   <i :class="getFileIcon(selectedDocument.file_type)"></i>
+                </div>
+                <h2>{{ selectedDocument.title }}</h2>
+                <div class="doc-details-list">
+                    <div class="detail-item"><strong>Proprietário:</strong> {{ selectedDocument.employee?.full_name || 'Empresa' }}</div>
+                    <div class="detail-item"><strong>Tamanho:</strong> {{ selectedDocument.file_size_formatted }}</div>
+                    <div class="detail-item"><strong>Data de Envio:</strong> {{ formatDate(selectedDocument.created_at) }}</div>
+                    <div class="detail-item"><strong>Vencimento:</strong> {{ formatDate(selectedDocument.expiration_date) || 'Permanente' }}</div>
+                    <div class="detail-item"><strong>Visibilidade:</strong> {{ getVisibilityLabel(selectedDocument.visibility) }}</div>
+                </div>
+                
+                <div v-if="selectedDocument.status === 'pending'" class="approval-strip">
+                   <i class="pi pi-info-circle"></i>
+                   <p>Este documento foi enviado pelo colaborador e aguarda aprovação oficial.</p>
+                   <button @click="approveDocument(selectedDocument)" class="btn-approve">Validar Agora</button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button @click="downloadDocument(selectedDocument)" class="btn-primary">
+                  <i class="pi pi-download"></i> Baixar Arquivo
+                </button>
+            </div>
         </div>
+    </div>
 
-        <div class="modal-body">
-          <div class="doc-preview">
-            <div class="doc-icon-large">
-              <i :class="getFileIcon(selectedDocument.file_type)"></i>
+    <!-- Document Types Modal -->
+    <div v-if="showTypeModal" class="modal-overlay" @click="showTypeModal = false">
+        <div class="modal modal-lg" @click.stop>
+            <div class="modal-header">
+                <h2>Gerenciar Tipos de Documento</h2>
+                <button @click="showTypeModal = false" class="close-btn"><i class="pi pi-times"></i></button>
             </div>
-            <h3>{{ selectedDocument.file_name }}</h3>
-            <p class="file-size">{{ selectedDocument.file_size_formatted }}</p>
-          </div>
+            
+            <div class="modal-body doc-type-manager">
+                <div class="type-editor-grid">
+                    <!-- List of Types -->
+                    <div class="types-list-panel">
+                        <h3>Tipos Cadastrados</h3>
+                        <div v-if="types.length === 0" class="empty-state-mini">
+                            <p>Nenhum tipo cadastrado.</p>
+                        </div>
+                        <ul class="types-list">
+                            <li v-for="t in types" :key="t.id">
+                                <div class="type-info">
+                                    <span class="type-name">{{ t.name }}</span>
+                                    <small v-if="t.requires_expiration" class="badge-req">Requer Expiração</small>
+                                </div>
+                                <div class="type-actions">
+                                    <button @click="deleteType(t)" class="btn-icon danger"><i class="pi pi-trash"></i></button>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
 
-          <div v-if="selectedDocument.description" class="doc-description">
-            <label>Descrição</label>
-            <p>{{ selectedDocument.description }}</p>
-          </div>
-
-          <div class="doc-details">
-            <div class="detail-item">
-              <strong>Categoria:</strong>
-              <span>{{ selectedDocument.category?.name }}</span>
+                    <!-- Add New Type -->
+                    <div class="type-form-panel">
+                        <h3>Novo Tipo</h3>
+                        <div class="type-form">
+                            <div class="input-group">
+                                <label>Nome do Tipo *</label>
+                                <input v-model="typeForm.name" type="text" placeholder="Ex: Passaporte, Diploma..." required />
+                            </div>
+                            <div class="input-group">
+                                <label>Descrição (Opcional)</label>
+                                <textarea v-model="typeForm.description" rows="3" placeholder="Breve explicação do uso deste tipo..."></textarea>
+                            </div>
+                            <div class="checkbox-group">
+                                <input v-model="typeForm.requires_expiration" type="checkbox" id="req_exp" />
+                                <label for="req_exp">Exigir data de validade/vencimento</label>
+                            </div>
+                            <button @click="saveType" class="btn-primary w-full" :disabled="typeSaving">
+                                <i v-if="typeSaving" class="pi pi-spin pi-spinner"></i>
+                                Adicionar Tipo
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="detail-item">
-              <strong>Público-Alvo:</strong>
-              <span>{{ getAccessLabel(selectedDocument) }}</span>
-            </div>
-            <div class="detail-item">
-              <strong>Status:</strong>
-              <span :class="selectedDocument.is_active ? 'text-success' : 'text-muted'">
-                {{ selectedDocument.is_active ? 'Ativo' : 'Inativo' }}
-              </span>
-            </div>
-            <div class="detail-item">
-              <strong>Enviado por:</strong>
-              <span>{{ selectedDocument.uploader?.name }}</span>
-            </div>
-            <div class="detail-item">
-              <strong>Data de Upload:</strong>
-              <span>{{ formatDate(selectedDocument.created_at) }}</span>
-            </div>
-          </div>
         </div>
-
-        <div class="modal-footer">
-          <button @click="closeViewModal" class="btn-secondary">Fechar</button>
-          <button @click="downloadDocument(selectedDocument)" class="btn-primary">
-            <i class="pi pi-download"></i>
-            Download
-          </button>
-        </div>
-      </div>
     </div>
   </div>
 </template>
@@ -436,236 +355,232 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { adminService } from '@/services/adminService'
 import { useToast } from 'vue-toastification'
+import Loading from '@/components/common/Loading.vue'
 import dayjs from 'dayjs'
+import _ from 'lodash'
 
 const toast = useToast()
-
 const loading = ref(true)
-const uploading = ref(false)
-const savingCategory = ref(false)
-const showUploadModal = ref(false)
-const showCategoryModal = ref(false)
-const showViewModal = ref(false)
-const editingDocument = ref(null)
-const editingCategory = ref(null)
-const selectedDocument = ref(null)
-const selectedFile = ref(null)
-const fileInput = ref(null)
-
+const saving = ref(false)
 const documents = ref([])
 const categories = ref([])
-const departments = ref([])
-const positions = ref([])
+const types = ref([])
 const employees = ref([])
+const stats = ref({ total: 0, active: 0, expired: 0, expiring_soon: 0, pending: 0 })
+const pagination = ref({ current_page: 1, last_page: 1, total: 0 })
 
 const filters = reactive({
   category_id: '',
-  is_active: '',
-  search: ''
+  status: '',
+  visibility: '',
+  search: '',
+  page: 1
+})
+
+const showModal = ref(false)
+const showViewModal = ref(false)
+const showTypeModal = ref(false)
+const typeSaving = ref(false)
+const editingDocument = ref(null)
+const selectedDocument = ref(null)
+
+const typeForm = reactive({
+  name: '',
+  description: '',
+  requires_expiration: false
 })
 
 const form = reactive({
   title: '',
-  description: '',
   category_id: '',
-  access_level: 'all',
-  access_ids: [],
-  is_active: true
+  type_id: '',
+  employee_id: '',
+  visibility: 'internal',
+  expiration_date: '',
+  file: null
 })
 
-const categoryForm = reactive({
-  name: '',
-  description: ''
-})
-
-// Computed
-const activeCount = computed(() => 
-  documents.value.filter(d => d.is_active).length
-)
-
-const totalSize = computed(() => {
-  const bytes = documents.value.reduce((sum, d) => sum + (d.file_size || 0), 0)
-  if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(2) + ' GB'
-  if (bytes >= 1048576) return (bytes / 1048576).toFixed(2) + ' MB'
-  if (bytes >= 1024) return (bytes / 1024).toFixed(2) + ' KB'
-  return bytes + ' bytes'
-})
-
-// Debounce search
-let searchTimeout
-const debouncedFetch = () => {
-  clearTimeout(searchTimeout)
-  searchTimeout = setTimeout(() => {
-    fetchDocuments()
-  }, 500)
+const fetchStats = async () => {
+  try {
+    const { data } = await adminService.documents.getStats()
+    stats.value = data
+  } catch (e) {}
 }
 
-// Methods
 const fetchDocuments = async () => {
   loading.value = true
   try {
-    const params = {}
-    if (filters.category_id) params.category_id = filters.category_id
-    if (filters.is_active !== '') params.is_active = filters.is_active
-    if (filters.search) params.search = filters.search
-
-    const { data } = await adminService.documents.getAll(params)
-    documents.value = data.data || data
-  } catch (error) {
-    console.error('Erro ao carregar documentos:', error)
-    toast.error('Erro ao carregar documentos')
+    const { data } = await adminService.documents.getAll(filters)
+    documents.value = data.data || []
+    pagination.value = {
+      current_page: data.current_page,
+      last_page: data.last_page,
+      total: data.total
+    }
+  } catch (e) {
+    toast.error('Erro ao carregar documentos.')
   } finally {
     loading.value = false
   }
 }
 
-const fetchCategories = async () => {
+const fetchAuxiliary = async () => {
   try {
-    const { data } = await adminService.documents.getCategories()
-    categories.value = data
-  } catch (error) {
-    console.error('Erro ao carregar categorias:', error)
-  }
+    const [catRes, typeRes, empRes] = await Promise.all([
+      adminService.documents.getCategories(),
+      adminService.documents.getTypes(),
+      adminService.employees.getAll()
+    ])
+    categories.value = catRes.data || []
+    types.value = typeRes.data || []
+    employees.value = empRes.data.data || empRes.data || []
+  } catch (e) {}
 }
 
-const fetchDepartments = async () => {
-  try {
-    const { data } = await adminService.departments.getAll()
-    departments.value = data.data || data
-  } catch (error) {
-    console.error('Erro ao carregar departamentos:', error)
-  }
+const debouncedFetch = _.debounce(() => {
+  filters.page = 1
+  fetchDocuments()
+}, 500)
+
+const selectCategory = (id) => {
+  filters.category_id = id
+  filters.page = 1
+  fetchDocuments()
 }
 
-const fetchPositions = async () => {
-  try {
-    const { data } = await adminService.positions.getAll()
-    positions.value = data.data || data
-  } catch (error) {
-    console.error('Erro ao carregar cargos:', error)
-  }
+const filterByStatus = (status) => {
+  filters.status = status
+  filters.page = 1
+  fetchDocuments()
 }
 
-const fetchEmployees = async () => {
-  try {
-    const { data } = await adminService.employees.getAll()
-    employees.value = data.data || data
-  } catch (error) {
-    console.error('Erro ao carregar colaboradores:', error)
+const toggleVisibilityFilter = (v) => {
+  filters.visibility = filters.visibility === v ? '' : v
+  fetchDocuments()
+}
+
+const changePage = (p) => {
+  filters.page = p
+  fetchDocuments()
+}
+
+const handleFileSelect = (e) => {
+  form.file = e.target.files[0]
+  if (form.file && !form.title) {
+    form.title = form.file.name.split('.').slice(0, -1).join('.')
   }
 }
 
 const openUploadModal = () => {
   editingDocument.value = null
   resetForm()
-  showUploadModal.value = true
-}
-
-const closeUploadModal = () => {
-  showUploadModal.value = false
-  editingDocument.value = null
-  selectedFile.value = null
-  resetForm()
-}
-
-const handleFileChange = (event) => {
-  const file = event.target.files[0]
-  if (!file) return
-
-  if (file.size > 10 * 1024 * 1024) {
-    toast.error('Arquivo muito grande. Máximo: 10MB')
-    event.target.value = ''
-    return
-  }
-
-  selectedFile.value = file
-}
-
-const clearFile = () => {
-  selectedFile.value = null
-  if (fileInput.value) {
-    fileInput.value.value = ''
-  }
-}
-
-const saveDocument = async () => {
-  if (!editingDocument.value && !selectedFile.value) {
-    toast.error('Selecione um arquivo')
-    return
-  }
-
-  if ((form.access_level !== 'all') && form.access_ids.length === 0) {
-    toast.error('Selecione pelo menos um item de acesso')
-    return
-  }
-
-  uploading.value = true
-  try {
-    if (editingDocument.value) {
-      // Update
-      const { data } = await adminService.documents.update(editingDocument.value.id, form)
-      toast.success(data.message || 'Documento atualizado!')
-    } else {
-      // Create
-      const formData = new FormData()
-      formData.append('file', selectedFile.value)
-      formData.append('title', form.title)
-      formData.append('category_id', form.category_id)
-      formData.append('access_level', form.access_level)
-      formData.append('is_active', form.is_active ? '1' : '0')
-      
-      if (form.description) {
-        formData.append('description', form.description)
-      }
-      
-      if (form.access_level !== 'all' && form.access_ids.length > 0) {
-        form.access_ids.forEach((id, index) => {
-          formData.append(`access_ids[${index}]`, id)
-        })
-      }
-
-      const { data } = await adminService.documents.create(formData)
-      toast.success(data.message || 'Documento enviado!')
-    }
-
-    closeUploadModal()
-    fetchDocuments()
-  } catch (error) {
-    console.error('Erro ao salvar:', error)
-    toast.error(error.response?.data?.message || 'Erro ao salvar documento')
-  } finally {
-    uploading.value = false
-  }
+  showModal.value = true
 }
 
 const editDocument = (doc) => {
   editingDocument.value = doc
-  
   form.title = doc.title
-  form.description = doc.description || ''
-  form.category_id = doc.category_id
-  form.access_level = doc.access_level
-  form.access_ids = doc.access_ids || []
-  form.is_active = doc.is_active
-  
-  showUploadModal.value = true
+  form.category_id = doc.category_id || ''
+  form.type_id = doc.type_id || ''
+  form.employee_id = doc.employee_id || ''
+  form.visibility = doc.visibility || 'internal'
+  form.expiration_date = doc.expiration_date || ''
+  form.file = null
+  showModal.value = true
 }
 
-const deleteDocument = async (doc) => {
-  if (!confirm(`Tem certeza que deseja excluir "${doc.title}"?`)) return
-
+const saveDocument = async () => {
+  if (!form.file && !editingDocument.value) {
+    return toast.warning('Selecione um arquivo.')
+  }
+  
+  saving.value = true
   try {
-    const { data } = await adminService.documents.delete(doc.id)
-    toast.success(data.message || 'Documento excluído!')
+    const fd = new FormData()
+    Object.keys(form).forEach(key => {
+       if (form[key]) fd.append(key, form[key])
+    })
+    
+    if (editingDocument.value) {
+      await adminService.documents.update(editingDocument.value.id, fd)
+      toast.success('Alterações salvas.')
+    } else {
+      await adminService.documents.create(fd)
+      toast.success('Documento arquivado com sucesso.')
+    }
+    closeModal()
     fetchDocuments()
-  } catch (error) {
-    console.error('Erro ao excluir:', error)
-    toast.error('Erro ao excluir documento')
+    fetchStats()
+  } catch (e) {
+    toast.error('Erro ao salvar documento.')
+  } finally {
+    saving.value = false
   }
 }
 
-const downloadDocument = (doc) => {
-  window.open(doc.file_url, '_blank')
+const saveType = async () => {
+  if (!typeForm.name) return toast.warning('Nome é obrigatório.')
+  
+  typeSaving.value = true
+  try {
+    await adminService.documents.createType(typeForm)
+    toast.success('Tipo de documento adicionado.')
+    typeForm.name = ''
+    typeForm.description = ''
+    typeForm.requires_expiration = false
+    fetchAuxiliary()
+  } catch (e) {
+    toast.error('Erro ao salvar tipo.')
+  } finally {
+    typeSaving.value = false
+  }
+}
+
+const deleteType = async (type) => {
+  if (!confirm(`Eliminar "${type.name}"?`)) return
+  try {
+    await adminService.documents.deleteType(type.id)
+    toast.success('Tipo removido.')
+    fetchAuxiliary()
+  } catch (e) {
+    toast.error(e.response?.data?.message || 'Erro ao remover tipo.')
+  }
+}
+
+const downloadDocument = async (doc) => {
+  try {
+     const res = await adminService.documents.download(doc.id)
+     const url = window.URL.createObjectURL(new Blob([res.data]))
+     const link = document.createElement('a')
+     link.href = url
+     link.setAttribute('download', doc.file_name)
+     document.body.appendChild(link)
+     link.click()
+  } catch (e) {
+     toast.error('Erro ao descarregar ficheiro.')
+  }
+}
+
+const approveDocument = async (doc) => {
+  try {
+     await adminService.documents.update(doc.id, { status: 'active' })
+     toast.success('Documento validado e ativado.')
+     closeViewModal()
+     fetchDocuments()
+     fetchStats()
+  } catch (e) {
+     toast.error('Erro ao aprovar.')
+  }
+}
+
+const deleteDocument = async (doc) => {
+  if (!confirm(`Confirmar eliminação permanente de "${doc.title}"?`)) return
+  try {
+    await adminService.documents.delete(doc.id)
+    toast.success('Documento removido.')
+    fetchDocuments()
+    fetchStats()
+  } catch (e) {}
 }
 
 const viewDocument = (doc) => {
@@ -673,1079 +588,322 @@ const viewDocument = (doc) => {
   showViewModal.value = true
 }
 
+const closeModal = () => {
+  showModal.value = false
+  editingDocument.value = null
+}
+
 const closeViewModal = () => {
   showViewModal.value = false
   selectedDocument.value = null
 }
 
-const saveCategory = async () => {
-  
-  if (!categoryForm.name.trim()) {
-    toast.error('Informe o nome da categoria')
-    return
-  }
-
-  savingCategory.value = true
-  try {
-    if (editingCategory.value) {
-      const { data } = await adminService.documents.updateCategory(editingCategory.value.id, categoryForm)
-      toast.success(data.message || 'Categoria atualizada!')
-    } else {
-      const { data } = await adminService.documents.createCategory(categoryForm)
-      toast.success(data.message || 'Categoria criada!')
-    }
-
-    categoryForm.name = ''
-    categoryForm.description = ''
-    editingCategory.value = null
-    fetchCategories()
-  } catch (error) {
-    console.error('Erro ao salvar categoria:', error)
-    toast.error('Erro ao salvar categoria')
-  } finally {
-    savingCategory.value = false
-  }
-}
-
-const editCategory = (cat) => {
-  editingCategory.value = cat
-  categoryForm.name = cat.name
-  categoryForm.description = cat.description || ''
-}
-
-const cancelEditCategory = () => {
-  editingCategory.value = null
-  categoryForm.name = ''
-  categoryForm.description = ''
-}
-
-const deleteCategory = async (cat) => {
-  if (cat.documents_count > 0) {
-    toast.error('Não é possível excluir categoria com documentos')
-    return
-  }
-
-  if (!confirm(`Excluir categoria "${cat.name}"?`)) return
-
-  try {
-    const { data } = await adminService.documents.deleteCategory(cat.id)
-    toast.success(data.message || 'Categoria excluída!')
-    fetchCategories()
-  } catch (error) {
-    console.error('Erro ao excluir:', error)
-    toast.error(error.response?.data?.message || 'Erro ao excluir categoria')
-  }
-}
-
-const clearAccessIds = () => {
-  form.access_ids = []
-}
-
 const resetForm = () => {
   form.title = ''
-  form.description = ''
   form.category_id = ''
-  form.access_level = 'all'
-  form.access_ids = []
-  form.is_active = true
+  form.type_id = ''
+  form.employee_id = ''
+  form.visibility = 'internal'
+  form.expiration_date = ''
+  form.file = null
 }
 
-const applyFilters = () => {
-  fetchDocuments()
+const truncate = (str, n) => str?.length > n ? str.substr(0, n - 1) + '...' : str
+const formatDate = (date) => date ? dayjs(date).format('DD/MM/YYYY') : '-'
+const formatFileSize = (bytes) => {
+  if (bytes === 0) return '0 Bytes'
+  const k = 1024, sizes = ['Bytes', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
-const getPreview = (text) => {
-  if (!text) return ''
-  return text.length > 100 ? text.substring(0, 100) + '...' : text
+const getFileIcon = (type) => {
+  const map = { pdf: 'pi pi-file-pdf', doc: 'pi pi-file-word', docx: 'pi pi-file-word', xls: 'pi pi-file-excel', xlsx: 'pi pi-file-excel', jpg: 'pi pi-image', png: 'pi pi-image' }
+  return map[type?.toLowerCase()] || 'pi pi-file'
 }
 
-const getAccessLabel = (doc) => {
-  if (doc.access_level === 'all') return 'Todos os Colaboradores'
-  if (doc.access_level === 'department') {
-    const count = doc.access_ids?.length || 0
-    return `${count} Departamento${count !== 1 ? 's' : ''}`
-  }
-  if (doc.access_level === 'position') {
-    const count = doc.access_ids?.length || 0
-    return `${count} Cargo${count !== 1 ? 's' : ''}`
-  }
-  if (doc.access_level === 'specific') {
-    const count = doc.access_ids?.length || 0
-    return `${count} Colaborador${count !== 1 ? 'es' : ''}`
-  }
-  return '-'
+const getStatusLabel = (s) => {
+  const map = { active: 'Ativo', pending: 'Revisão', expired: 'Expirado', archived: 'Arquivo' }
+  return map[s] || s
 }
 
-const getFileIcon = (fileType) => {
-  const icons = {
-    pdf: 'pi pi-file-pdf',
-    doc: 'pi pi-file-word',
-    docx: 'pi pi-file-word',
-    xls: 'pi pi-file-excel',
-    xlsx: 'pi pi-file-excel',
-    ppt: 'pi pi-file',
-    pptx: 'pi pi-file',
-    jpg: 'pi pi-image',
-    jpeg: 'pi pi-image',
-    png: 'pi pi-image',
-    gif: 'pi pi-image'
-  }
-  return icons[fileType?.toLowerCase()] || 'pi pi-file'
+const statusBadgeClass = (s) => `status-badge s-${s}`
+
+const getVisibilityLabel = (v) => {
+  const map = { internal: 'Colaborador', hr: 'Privado (RH)', manager: 'Gestão', private: 'Admins' }
+  return map[v] || v
 }
 
-const formatDate = (date) => {
-  return date ? dayjs(date).format('DD/MM/YYYY HH:mm') : '-'
+const getVisibilityIcon = (v) => v === 'private' || v === 'hr' ? 'pi pi-lock' : 'pi pi-users'
+
+const expiryClass = (doc) => {
+  if (dayjs(doc.expiration_date).isBefore(dayjs())) return 'text-danger'
+  if (dayjs(doc.expiration_date).isBefore(dayjs().add(30, 'days'))) return 'text-warning'
+  return 'text-success'
 }
 
 onMounted(() => {
   fetchDocuments()
-  fetchCategories()
-  fetchDepartments()
-  fetchPositions()
-  fetchEmployees()
+  fetchStats()
+  fetchAuxiliary()
 })
 </script>
 
 <style scoped>
-.documents-page {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 2rem;
-  background: #f8fafc;
-  min-height: 100vh;
-}
+.documents-page { padding: 2rem; display: flex; flex-direction: column; gap: 2rem; background: #f8fafc; min-height: 100vh; }
 
+.page-header .header-content { display: flex; justify-content: space-between; align-items: center; }
+.header-title { display: flex; align-items: center; gap: 1rem; }
+.header-title i { font-size: 2rem; color: #3b82f6; }
+.header-title h1 { font-size: 1.75rem; font-weight: 800; color: #1e293b; margin: 0; }
+.subtitle { color: #64748b; margin: 0; }
+
+.header-actions { display: flex; align-items: center; gap: 1rem; }
+.pending-badge { background: #fee2e2; color: #b91c1c; padding: 0.5rem 1rem; border-radius: 20px; font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem; border: 1px solid #fecaca; }
+
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; }
+.stat-card { background: white; padding: 1.5rem; border-radius: 16px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 1rem; cursor: pointer; transition: all 0.3s; }
+.stat-card:hover { transform: translateY(-4px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+.stat-icon { width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
+.stat-icon.total { background: #eff6ff; color: #3b82f6; }
+.stat-icon.active { background: #f0fdf4; color: #16a34a; }
+.stat-icon.expiring { background: #fffbeb; color: #d97706; }
+.stat-icon.expired { background: #fef2f2; color: #dc2626; }
+.stat-label { display: block; font-size: 0.75rem; color: #64748b; font-weight: 600; text-transform: uppercase; }
+.stat-value { font-size: 1.5rem; font-weight: 800; color: #1e293b; }
+
+.main-layout { display: grid; grid-template-columns: 280px 1fr; gap: 2rem; }
+
+.doc-sidebar { background: white; border-radius: 16px; padding: 1.5rem; border: 1px solid #e2e8f0; height: fit-content; }
+.sidebar-section h3 { font-size: 0.85rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 1rem; }
+.category-list { list-style: none; padding: 0; margin-bottom: 2rem; }
+.category-list li { padding: 0.75rem 1rem; border-radius: 8px; cursor: pointer; color: #475569; display: flex; align-items: center; gap: 0.75rem; transition: 0.2s; }
+.category-list li:hover { background: #f1f5f9; color: #1e293b; }
+.category-list li.active { background: #3b82f6; color: white; }
+
+.quick-filters { display: flex; flex-direction: column; gap: 0.5rem; }
+.q-filter { padding: 0.75rem; border-radius: 8px; border: 1px solid #f1f5f9; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; gap: 0.5rem; }
+.q-filter.active { border-color: #3b82f6; color: #3b82f6; background: #eff6ff; }
+
+.content-header { margin-bottom: 1.5rem; }
+.search-box { position: relative; width: 100%; max-width: 500px; }
+.search-box i { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: #94a3b8; }
+.search-box input { width: 100%; padding: 0.8rem 1rem 0.8rem 2.8rem; border-radius: 12px; border: 1px solid #e2e8f0; font-size: 1rem; transition: 0.3s; }
+.search-box input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
+
+.documents-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
+.doc-item-card { background: white; border-radius: 16px; border: 1px solid #e2e8f0; padding: 1.25rem; transition: 0.3s; position: relative; }
+.doc-item-card:hover { border-color: #3b82f6; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+.doc-item-card.is-pending { border-left: 4px solid #f59e0b; }
+
+.doc-item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+.doc-type-icon { font-size: 2rem; color: #64748b; }
+.status-badge { padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
+.s-active { background: #dcfce7; color: #16a34a; }
+.s-pending { background: #fef3c7; color: #92400e; }
+.s-expired { background: #fee2e2; color: #ef4444; }
+
+.doc-item-body h4 { margin: 0 0 0.5rem 0; font-size: 1rem; color: #1e293b; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.doc-metadata { display: flex; gap: 1rem; margin-bottom: 1rem; }
+.meta-tag { background: #f1f5f9; padding: 0.2rem 0.6rem; border-radius: 6px; font-size: 0.75rem; color: #475569; }
+.meta-size { font-size: 0.75rem; color: #94a3b8; }
+.doc-owner { font-size: 0.85rem; color: #64748b; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem; }
+.doc-timer { font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 0.4rem; }
+
+.doc-item-footer { border-top: 1px solid #f1f5f9; padding-top: 1rem; margin-top: 1rem; display: flex; justify-content: space-between; align-items: center; }
+.visibility-info { display: flex; align-items: center; gap: 0.4rem; color: #94a3b8; }
+.item-actions { display: flex; gap: 0.4rem; }
+.btn-icon { width: 30px; height: 30px; border-radius: 8px; border: 1px solid #f1f5f9; background: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; color: #64748b; transition: 0.2s; }
+.btn-icon:hover { background: #f8fafc; color: #1e293b; border-color: #cbd5e1; }
+.btn-icon.primary { color: #3b82f6; }
+.btn-icon.danger { color: #dc2626; }
+
+.pagination-bar { margin-top: 2rem; display: flex; align-items: center; gap: 1rem; justify-content: center; }
+.pagination-bar button { padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid #e2e8f0; background: white; cursor: pointer; }
+
+/* Modals */
+.modal-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 2000; }
+.modal { background: white; border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow: hidden; }
+.modal-lg { width: 800px; }
+.modal-md { width: 450px; }
+.modal-header { padding: 1.5rem; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
+.modal-header h2 { font-size: 1.25rem; font-weight: 800; color: #1e293b; margin: 0; }
+.close-btn { background: none; border: none; font-size: 1.25rem; color: #94a3b8; cursor: pointer; }
+
+.upload-form-grid { display: grid; grid-template-columns: 250px 1fr; gap: 2rem; padding: 2rem; }
+.file-dropzone { height: 100%; border: 2px dashed #cbd5e1; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; padding: 1rem; text-align: center; }
+.file-dropzone:hover { border-color: #3b82f6; background: #f0f9ff; }
+.file-dropzone i { font-size: 2.5rem; color: #3b82f6; margin-bottom: 1rem; }
+.file-info-selected { color: #1e293b; }
+
+.fields-section { display: flex; flex-direction: column; gap: 1.25rem; }
+.input-group label { display: block; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #64748b; margin-bottom: 0.5rem; }
+.input-group input, .input-group select { width: 100%; padding: 0.75rem 1rem; border-radius: 10px; border: 1px solid #e2e8f0; }
+.field-row.double { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+.modal-footer { padding: 1.5rem; background: #f8fafc; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end; gap: 1rem; }
+.btn-primary { background: #3b82f6; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 10px; font-weight: 700; cursor: pointer; }
+.btn-secondary { background: white; border: 1px solid #e2e8f0; color: #475569; padding: 0.75rem 1.5rem; border-radius: 10px; font-weight: 700; cursor: pointer; }
+
+.approval-strip { background: #fff7ed; padding: 1.5rem; border-radius: 12px; border: 1px solid #ffedd5; margin-top: 2rem; text-align: center; }
+.approval-strip i { font-size: 1.5rem; color: #f59e0b; margin-bottom: 0.5rem; }
+.btn-approve { background: #16a34a; color: white; border: none; padding: 0.5rem 1.5rem; border-radius: 8px; font-weight: 700; margin-top: 1rem; cursor: pointer; }
+
+.doc-details-list { display: flex; flex-direction: column; gap: 0.75rem; margin: 1.5rem 0; }
+
+/** Estilo do modal */
+/* Overlay */
 /* Header */
-.page-header {
-  margin-bottom: 2rem;
-}
-
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-}
-
-.header-title {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-
-  > i {
-    font-size: 3rem;
-    color: #3b82f6;
-    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-    padding: 1rem;
-    border-radius: 1rem;
-  }
-
-  h1 {
-    font-size: 2rem;
-    font-weight: 700;
-    color: #1e293b;
-    margin: 0;
-  }
-
-  .subtitle {
-    color: #64748b;
-    font-size: 1rem;
-    margin: 0.25rem 0 0 0;
-  }
-}
-
-.header-actions {
-  display: flex;
-  gap: 0.75rem;
-}
-
-.btn-primary,
-.btn-secondary {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
-  border: none;
-  border-radius: 0.75rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-primary {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  color: white;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-}
-
-.btn-primary:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
-}
-
-.btn-secondary {
-  background: white;
-  color: #475569;
-  border: 2px solid #e2e8f0;
-}
-
-.btn-secondary:hover {
-  background: #f8fafc;
-  border-color: #cbd5e1;
-}
-
-/* Stats Grid */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 2rem;
-}
-
-.stat-card {
-  background: white;
-  padding: 1.5rem;
-  border-radius: 1rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  transition: all 0.2s;
-}
-
-.stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.stat-icon {
-  width: 60px;
-  height: 60px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.75rem;
-}
-
-.stat-icon.total {
-  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-  color: #2563eb;
-}
-
-.stat-icon.active {
-  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-  color: #059669;
-}
-
-.stat-icon.categories {
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-  color: #d97706;
-}
-
-.stat-icon.size {
-  background: linear-gradient(135deg, #e9d5ff 0%, #d8b4fe 100%);
-  color: #9333ea;
-}
-
-.stat-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.stat-label {
-  font-size: 0.875rem;
-  color: #64748b;
-  font-weight: 500;
-}
-
-.stat-value {
-  font-size: 2rem;
-  font-weight: 700;
-  color: #1e293b;
-}
-
-/* Filters */
-.filters-card {
-  background: white;
-  padding: 1.5rem;
-  border-radius: 1rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  margin-bottom: 2rem;
-}
-
-.filters-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1rem;
-}
-
-.filter-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-
-  label {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: #475569;
-  }
-}
-
-.filter-select {
-  padding: 0.75rem 1rem;
-  border: 2px solid #e2e8f0;
-  border-radius: 0.75rem;
-  font-size: 0.95rem;
-  transition: all 0.2s;
-  background: white;
-}
-
-.filter-select:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.search-input {
-  position: relative;
-
-  i {
-    position: absolute;
-    left: 1rem;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #94a3b8;
-  }
-
-  input {
-    width: 100%;
-    padding: 0.75rem 1rem 0.75rem 2.75rem;
-    border: 2px solid #e2e8f0;
-    border-radius: 0.75rem;
-    font-size: 0.95rem;
-    transition: all 0.2s;
-  }
-
-  input:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-  }
-}
-
-/* Loading & Empty */
-.loading-state,
-.empty-state {
-  background: white;
-  padding: 4rem 2rem;
-  text-align: center;
-  border-radius: 1rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.loading-state i {
-  font-size: 3rem;
-  color: #3b82f6;
-  margin-bottom: 1rem;
-}
-
-.empty-state i {
-  font-size: 4rem;
-  color: #cbd5e1;
-  margin-bottom: 1rem;
-}
-
-.empty-state h3 {
-  font-size: 1.25rem;
-  color: #475569;
-  margin: 0 0 0.5rem 0;
-}
-
-.empty-state p {
-  color: #94a3b8;
-  margin: 0 0 1.5rem 0;
-}
-
-/* Documents Grid */
-.documents-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 1.5rem;
-}
-
-.document-card {
-  position: relative;
-  background: white;
-  border-radius: 1rem;
-  padding: 1.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.document-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-}
-
-.document-icon {
-  width: 60px;
-  height: 60px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 2rem;
-  color: #3b82f6;
-  margin-bottom: 0.5rem;
-}
-
-.document-info {
-  flex: 1;
-}
-
-.document-info h4 {
-  font-size: 1.125rem;
-  font-weight: 700;
-  color: #1e293b;
-  margin: 0 0 0.5rem 0;
-  line-height: 1.4;
-}
-
-.document-info p {
-  font-size: 0.875rem;
-  color: #64748b;
-  margin: 0 0 0.75rem 0;
-  line-height: 1.5;
-}
-
-.document-meta {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  margin-bottom: 0.75rem;
-}
-
-.category-badge,
-.size-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.375rem 0.75rem;
-  border-radius: 8px;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-.category-badge {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.size-badge {
-  background: #f1f5f9;
-  color: #475569;
-}
-
-.document-access {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: #64748b;
-  font-size: 0.875rem;
-
-  i {
-    font-size: 1rem;
-  }
-}
-
-.document-actions {
-  display: flex;
-  gap: 0.5rem;
-  padding-top: 1rem;
-  border-top: 1px solid #f1f5f9;
-}
-
-.btn-icon {
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f1f5f9;
-  border: none;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  color: #475569;
-}
-
-.btn-icon:hover {
-  background: #e2e8f0;
-  transform: scale(1.05);
-}
-
-.btn-icon.btn-danger:hover {
-  background: #fee2e2;
-  color: #dc2626;
-}
-
-.inactive-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.7);
-  border-radius: 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-weight: 700;
-  font-size: 1.125rem;
-}
-
-/* Modal */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 1rem;
-  animation: fadeIn 0.2s ease;
-}
-
-.modal-content {
-  background: white;
-  border-radius: 1rem;
-  max-width: 600px;
-  width: 100%;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  animation: slideUp 0.3s ease;
-}
-
-.modal-content.modal-large {
-  max-width: 800px;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slideUp {
-  from {
-    transform: translateY(20px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
 .modal-header {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
-  padding: 1.5rem;
-  border-bottom: 1px solid #e2e8f0;
-
-  h2 {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #1e293b;
-    margin: 0;
-  }
+  padding: 1rem 1.25rem;
+  border-bottom: 0.5px solid #e5e7eb;
 }
 
-.btn-close {
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f1f5f9;
-  border: none;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &:hover {
-    background: #ef4444;
-    color: white;
-  }
-}
-
-.modal-body {
-  padding: 1.5rem;
-}
-
-.form-group {
-  margin-bottom: 1.5rem;
-
-  label {
-    display: block;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    color: #475569;
-    font-size: 0.9375rem;
-  }
-
-  input,
-  select,
-  textarea {
-    width: 100%;
-    padding: 0.75rem 1rem;
-    border: 2px solid #e2e8f0;
-    border-radius: 0.75rem;
-    font-size: 1rem;
-    font-family: inherit;
-    transition: all 0.2s;
-  }
-
-  input:focus,
-  select:focus,
-  textarea:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
-  }
-
-  textarea {
-    resize: vertical;
-    line-height: 1.6;
-  }
-
-  small {
-    display: block;
-    margin-top: 0.5rem;
-    font-size: 0.875rem;
-    color: #64748b;
-  }
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-.file-input-wrapper {
-  position: relative;
-
-  input[type="file"] {
-    width: 100%;
-  }
-}
-
-.selected-file {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 1rem;
-  background: #f8fafc;
-  border-radius: 0.75rem;
-  margin-top: 0.75rem;
-
-  i {
-    font-size: 1.5rem;
-    color: #3b82f6;
-  }
-
-  span {
-    flex: 1;
-    font-size: 0.95rem;
-    color: #1e293b;
-  }
-}
-
-.btn-remove {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #fee2e2;
-  color: #dc2626;
-  border: none;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &:hover {
-    background: #dc2626;
-    color: white;
-  }
-}
-
-.checkbox-group {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 0.75rem;
-  padding: 1rem;
-  background: #f8fafc;
-  border-radius: 0.75rem;
-  max-height: 200px;
-  overflow-y: auto;
-}
-
-.checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &:hover {
-    background: white;
-    border-radius: 0.5rem;
-  }
-
-  input[type="checkbox"] {
-    width: auto;
-    margin: 0;
-  }
-
-  span {
-    font-size: 0.9375rem;
-    color: #1e293b;
-  }
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-  padding: 1.5rem;
-  border-top: 1px solid #e2e8f0;
-
-  button {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1.5rem;
-    border-radius: 0.75rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    border: none;
-
-    &:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-  }
-}
-
-/* Category Modal */
-.category-form {
-  margin-bottom: 1.5rem;
-}
-
-.input-group {
-  display: flex;
-  gap: 0.5rem;
-
-  input {
-    flex: 1;
-  }
-}
-
-.btn-add,
-.btn-cancel {
-  width: 42px;
-  height: 42px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-add {
-  background: #3b82f6;
-  color: white;
-
-  &:hover:not(:disabled) {
-    background: #2563eb;
-  }
-}
-
-.btn-cancel {
-  background: #f1f5f9;
-  color: #475569;
-
-  &:hover {
-    background: #ef4444;
-    color: white;
-  }
-}
-
-.categories-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.empty-categories {
-  padding: 2rem;
-  text-align: center;
-  color: #94a3b8;
-}
-
-.category-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem;
-  background: #f8fafc;
-  border-radius: 0.75rem;
-  transition: all 0.2s;
-
-  &:hover {
-    background: #f1f5f9;
-  }
-}
-
-.category-info {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex: 1;
-
-  i {
-    font-size: 1.25rem;
-    color: #f59e0b;
-  }
-
-  span {
-    font-weight: 600;
-    color: #1e293b;
-  }
-}
-.category-form {
-  margin-bottom: 1.5rem;
-  padding-bottom: 1.5rem;
-  border-bottom: 2px solid #f1f5f9;
-}
-
-.category-form .form-group label {
-  display: block;
-  font-weight: 600;
-  margin-bottom: 0.75rem;
-  color: #1e293b;
-  font-size: 0.95rem;
-}
-
-.category-inputs {
-  display: grid;
-  grid-template-columns: 1fr 1.5fr auto;
-  gap: 0.75rem;
-  align-items: center;
-}
-
-.category-name-input,
-.category-desc-input {
-  padding: 0.75rem 1rem;
-  border: 2px solid #e2e8f0;
-  border-radius: 0.75rem;
-  font-size: 1rem;
-  transition: all 0.2s;
-}
-
-.category-name-input:focus,
-.category-desc-input:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
-}
-
-.category-buttons {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.btn-add,
-.btn-cancel {
-  width: 42px;
-  height: 42px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-add {
-  background: #3b82f6;
-  color: white;
-}
-
-.btn-add:hover:not(:disabled) {
-  background: #2563eb;
-  transform: scale(1.05);
-}
-
-.btn-add:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn-cancel {
-  background: #f1f5f9;
-  color: #475569;
-}
-
-.btn-cancel:hover {
-  background: #ef4444;
-  color: white;
-}
-.category-count {
-  color: #64748b !important;
-  font-weight: 400 !important;
-  font-size: 0.875rem !important;
-}
-
-.category-actions {
-  display: flex;
-  gap: 0.5rem;
-}
-
-/* View Modal */
-.doc-preview {
-  text-align: center;
-  padding: 2rem;
-  background: #f8fafc;
-  border-radius: 0.75rem;
-  margin-bottom: 1.5rem;
-}
-
-.doc-icon-large {
-  width: 80px;
-  height: 80px;
-  margin: 0 auto 1rem;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 3rem;
-  color: #3b82f6;
-}
-
-.doc-preview h3 {
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: #1e293b;
-  margin: 0 0 0.5rem 0;
-}
-
-.file-size {
-  color: #64748b;
-  font-size: 0.875rem;
+.modal-header h3 {
+  font-size: 15px;
+  font-weight: 500;
   margin: 0;
 }
 
-.doc-description {
-  margin-bottom: 1.5rem;
-
-  label {
-    display: block;
-    font-weight: 600;
-    color: #475569;
-    margin-bottom: 0.5rem;
-  }
-
-  p {
-    background: #f8fafc;
-    padding: 1rem;
-    border-radius: 0.75rem;
-    line-height: 1.6;
-    margin: 0;
-  }
+.close-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 0.5px solid #d1d5db;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  transition: background 0.15s;
 }
 
-.doc-details {
+.close-btn:hover {
+  background: #f3f4f6;
+}
+
+/* Body */
+.modal-body.doc-view-body {
+  padding: 1.5rem 1.25rem;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Ícone do documento */
+.doc-icon-large {
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  background: #eff6ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  color: #185FA5;
+}
+
+.doc-view-body h2 {
+  font-size: 16px;
+  font-weight: 500;
+  margin: 0;
+  text-align: center;
+}
+
+/* Lista de detalhes */
+.doc-details-list {
+  width: 100%;
+  background: #f9fafb;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
 
 .detail-item {
   display: flex;
   justify-content: space-between;
-  padding: 0.75rem 0;
-  border-bottom: 1px solid #f1f5f9;
-
-  &:last-child {
-    border-bottom: none;
-  }
-
-  strong {
-    color: #64748b;
-    font-size: 0.875rem;
-  }
-
-  span {
-    color: #1e293b;
-    font-weight: 500;
-  }
+  font-size: 13px;
+  padding: 6px 0;
+  border-bottom: 0.5px solid #e5e7eb;
 }
 
-.text-success {
-  color: #059669 !important;
+.detail-item:last-child {
+  border-bottom: none;
 }
 
-.text-muted {
-  color: #94a3b8 !important;
+.detail-item strong {
+  color: #6b7280;
+  font-weight: 400;
 }
 
-@media (max-width: 768px) {
-  .documents-page {
-    padding: 1rem;
-  }
-
-  .header-content {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .header-actions {
-    width: 100%;
-
-    button {
-      flex: 1;
-    }
-  }
-
-  .documents-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .form-row {
-    grid-template-columns: 1fr;
-  }
-
-  .checkbox-group {
-    grid-template-columns: 1fr;
-  }
+/* Faixa de aprovação */
+.approval-strip {
+  width: 100%;
+  border-radius: 8px;
+  border: 0.5px solid #fbbf24;
+  background: #fffbeb;
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
+
+.approval-strip .pi-info-circle {
+  font-size: 14px;
+  color: #b45309;
+}
+
+.approval-strip p {
+  font-size: 12px;
+  color: #92400e;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.btn-approve {
+  align-self: flex-start;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 14px;
+  border-radius: 8px;
+  border: 0.5px solid #b45309;
+  background: transparent;
+  color: #92400e;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-approve:hover {
+  background: #fef3c7;
+}
+
+/* Footer */
+.modal-footer {
+  padding: 0.875rem 1.25rem;
+  border-top: 0.5px solid #e5e7eb;
+  display: flex;
+  justify-content: flex-end;
+}
+
+
+
+/* Type Manager Styling */
+.type-editor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; padding: 2rem; }
+.types-list-panel h3, .type-form-panel h3 { font-size: 1rem; color: #1e293b; margin-bottom: 1.5rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.5rem; }
+.types-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.75rem; max-height: 400px; overflow-y: auto; }
+.types-list li { background: #f8fafc; padding: 1rem; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+.type-name { font-weight: 700; color: #1e293b; display: block; }
+.badge-req { background: #fee2e2; color: #b91c1c; font-size: 0.7rem; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600; }
+.type-form { display: flex; flex-direction: column; gap: 1.25rem; }
+.checkbox-group { display: flex; align-items: center; gap: 0.75rem; font-size: 0.9rem; color: #475569; }
+.checkbox-group input { width: 1.2rem; height: 1.2rem; }
+.w-full { width: 100%; }
+.empty-state-mini { text-align: center; color: #94a3b8; padding: 2rem; }
 </style>

@@ -154,7 +154,9 @@ const handleRegister = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(rgba(15, 23, 42, 0.75), rgba(15, 23, 42, 0.75)), url('/images/auth-bg.png');
+  background-size: cover;
+  background-position: center;
   padding: 2rem;
 }
 
@@ -288,7 +290,9 @@ const handleRegister = async () => {
 }
 
 .auth-illustration {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(rgba(102, 126, 234, 0.8), rgba(118, 75, 162, 0.8)), url('/images/auth-bg.png');
+  background-size: cover;
+  background-position: center;
   color: white;
   padding: 3rem;
   display: flex;

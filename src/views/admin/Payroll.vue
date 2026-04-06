@@ -10,10 +10,16 @@
             <p class="subtitle">Gerencie a folha de pagamento mensal dos colaboradores</p>
           </div>
         </div>
-        <button @click="openGenerateModal" class="btn-primary">
-          <i class="pi pi-plus"></i>
-          Gerar Folha do Mês
-        </button>
+        <div class="flex gap-3">
+          <button v-if="filters.reference_month && filters.reference_year" @click="downloadPayrollPdf('batch')" class="btn-secondary">
+            <i class="pi pi-file-pdf"></i>
+            Exportar Lote (PDF)
+          </button>
+          <router-link to="/admin/payroll/generate" class="btn-primary">
+            <i class="pi pi-plus"></i>
+            Gerar Folha do Mês
+          </router-link>
+        </div>
       </div>
     </div>
 
@@ -101,42 +107,46 @@
       <i class="pi pi-money-bill"></i>
       <h3>Nenhuma folha encontrada</h3>
       <p>Gere a primeira folha de pagamento do mês</p>
-      <button @click="openGenerateModal" class="btn-primary">
-        <i class="pi pi-plus"></i>
-        Gerar Folha
-      </button>
+      
     </div>
 
-    <!-- Payrolls List -->
-    <div v-else class="payrolls-list">
-      <div 
-        v-for="payroll in payrolls" 
-        :key="payroll.id"
-        class="payroll-card"
-        :class="`status-${payroll.status}`"
-      >
-        <div class="card-header">
-          <div class="employee-info">
-            <div class="employee-avatar">
-              {{ getInitials(payroll.employee?.user?.name) }}
-            </div>
-            <div class="employee-details">
-              <h3>{{ payroll.employee?.user?.name }}</h3>
-              <span class="employee-position">{{ payroll.employee?.position?.title }}</span>
-            </div>
-          </div>
+    <!-- Payrolls List Grouped by Month -->
+    <div v-else class="payrolls-container">
+      <div v-for="(group, period) in groupedPayrolls" :key="period" class="payroll-group">
+        <h2 class="group-title">
+          <i class="pi pi-calendar"></i>
+          {{ period }}
+        </h2>
+        
+        <div class="payrolls-grid">
+          <div 
+            v-for="payroll in group" 
+            :key="payroll.id"
+            class="payroll-card"
+            :class="`status-${payroll.status}`"
+          >
+            <div class="card-header">
+              <div class="employee-info">
+                <div class="employee-avatar">
+                  {{ getInitials(payroll.employee?.full_name) }}
+                </div>
+                <div class="employee-details">
+                  <h3>{{ payroll.employee?.full_name }}</h3>
+                  <span class="employee-position">{{ payroll.employee?.position?.title }}</span>
+                </div>
+              </div>
 
-          <div class="status-badge" :class="`badge-${payroll.status}`">
-            <i :class="getStatusIcon(payroll.status)"></i>
-            {{ getStatusLabel(payroll.status) }}
-          </div>
-        </div>
+              <div class="status-badge" :class="`badge-${payroll.status}`">
+                <i :class="getStatusIcon(payroll.status)"></i>
+                {{ getStatusLabel(payroll.status) }}
+              </div>
+            </div>
 
-        <div class="card-body">
-          <div class="payroll-period">
-            <i class="pi pi-calendar"></i>
-            <span>{{ payroll.reference_period }}</span>
-          </div>
+            <div class="card-body">
+              <div class="payroll-period-badge">
+                <i class="pi pi-clock"></i>
+                <span>{{ payroll.reference_period }}</span>
+              </div>
 
           <div class="payroll-values">
             <div class="value-item earnings">
@@ -166,28 +176,43 @@
           </div>
         </div>
 
-        <div class="card-footer">
-          <button @click="viewPayroll(payroll)" class="btn-view" title="Ver Detalhes">
-            <i class="pi pi-eye"></i>
-          </button>
+            <div class="card-footer">
+              <button @click="viewPayroll(payroll)" class="btn-view" title="Ver Detalhes">
+                <i class="pi pi-eye"></i>
+              </button>
 
-          <button 
-            v-if="payroll.status === 'draft'" 
-            @click="approvePayroll(payroll)" 
-            class="btn-approve" 
-            title="Aprovar"
-          >
-            <i class="pi pi-check"></i>
-          </button>
+              <button @click="downloadPayrollPdf('single', payroll)" class="btn-view" title="Baixar PDF">
+                <i class="pi pi-file-pdf"></i>
+              </button>
 
-          <button 
-            v-if="payroll.status === 'draft'" 
-            @click="deletePayroll(payroll)" 
-            class="btn-delete" 
-            title="Excluir"
-          >
-            <i class="pi pi-trash"></i>
-          </button>
+              <button 
+                v-if="payroll.status === 'draft'" 
+                @click="approvePayroll(payroll)" 
+                class="btn-approve" 
+                title="Aprovar"
+              >
+                <i class="pi pi-check"></i>
+              </button>
+
+              <button 
+                v-if="payroll.status === 'approved'" 
+                @click="rejectPayroll(payroll)" 
+                class="btn-reject" 
+                title="Rejeitar / Voltar para Rascunho"
+              >
+                <i class="pi pi-undo"></i>
+              </button>
+
+              <button 
+                v-if="payroll.status === 'draft'" 
+                @click="deletePayroll(payroll)" 
+                class="btn-delete" 
+                title="Excluir"
+              >
+                <i class="pi pi-trash"></i>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -219,57 +244,7 @@
       </button>
     </div>
 
-    <!-- Modal Generate -->
-    <div v-if="showGenerateModal" class="modal-overlay" @click="closeGenerateModal">
-      <div class="modal-content" @click.stop>
-        <div class="modal-header">
-          <h2>Gerar Folha de Pagamento</h2>
-          <button class="btn-close" @click="closeGenerateModal">
-            <i class="pi pi-times"></i>
-          </button>
-        </div>
 
-        <form @submit.prevent="generatePayroll" class="modal-body">
-          <div class="form-group">
-            <label>Mês de Referência *</label>
-            <select v-model="generateForm.reference_month" required class="form-select">
-              <option value="">Selecione o mês</option>
-              <option v-for="(month, index) in months" :key="index" :value="index + 1">
-                {{ month }}
-              </option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label>Ano de Referência *</label>
-            <select v-model="generateForm.reference_year" required class="form-select">
-              <option value="">Selecione o ano</option>
-              <option v-for="year in years" :key="year" :value="year">
-                {{ year }}
-              </option>
-            </select>
-          </div>
-
-          <div class="info-box">
-            <i class="pi pi-info-circle"></i>
-            <div>
-              <strong>Atenção:</strong>
-              <p>A folha será gerada para TODOS os colaboradores ativos. Certifique-se de que os salários base estão atualizados.</p>
-            </div>
-          </div>
-
-          <div class="modal-footer">
-            <button type="button" @click="closeGenerateModal" class="btn-secondary" :disabled="generating">
-              Cancelar
-            </button>
-            <button type="submit" class="btn-primary" :disabled="generating">
-              <i class="pi" :class="generating ? 'pi-spin pi-spinner' : 'pi-check'"></i>
-              {{ generating ? 'Gerando...' : 'Gerar Folha' }}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
 
     <!-- Modal View Details -->
     <div v-if="showViewModal && selectedPayroll" class="modal-overlay" @click="closeViewModal">
@@ -285,10 +260,10 @@
           <div class="payroll-detail-header">
             <div class="detail-employee">
               <div class="employee-avatar large">
-                {{ getInitials(selectedPayroll.employee?.user?.name) }}
+                {{ getInitials(selectedPayroll.employee?.full_name) }}
               </div>
               <div>
-                <h3>{{ selectedPayroll.employee?.user?.name }}</h3>
+                <h3>{{ selectedPayroll.employee?.full_name }}</h3>
                 <p>{{ selectedPayroll.employee?.position?.title }}</p>
                 <p class="text-muted">{{ selectedPayroll.employee?.department?.name }}</p>
               </div>
@@ -360,6 +335,18 @@
 
         <div class="modal-footer">
           <button @click="closeViewModal" class="btn-secondary">Fechar</button>
+          <button @click="downloadPayrollPdf('single', selectedPayroll)" class="btn-secondary">
+             <i class="pi pi-file-pdf"></i>
+             Exportar PDF
+          </button>
+          <button 
+            v-if="selectedPayroll.status === 'approved'" 
+            @click="markAsPaid(selectedPayroll)" 
+            class="btn-paid"
+          >
+            <i class="pi pi-dollar"></i>
+            Marcar como Pago
+          </button>
           <button 
             v-if="selectedPayroll.status === 'draft'" 
             @click="approvePayroll(selectedPayroll)" 
@@ -371,19 +358,33 @@
         </div>
       </div>
     </div>
+    
+    <!-- Confirmation Modal -->
+    <ConfirmModal
+      :show="confirmState.show"
+      :title="confirmState.title"
+      :message="confirmState.message"
+      :variant="confirmState.variant"
+      :icon="confirmState.icon"
+      :confirm-text="confirmState.confirmText"
+      :loading="confirmState.loading"
+      @close="confirmState.show = false"
+      @confirm="confirmState.action"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { adminService } from '@/services/adminService'
+import api from '@/services/api'
 import { useToast } from 'vue-toastification'
+import ConfirmModal from '@/components/common/ConfirmModal.vue'
 
 const toast = useToast()
 
 const loading = ref(true)
 const generating = ref(false)
-const showGenerateModal = ref(false)
 const showViewModal = ref(false)
 const selectedPayroll = ref(null)
 
@@ -400,10 +401,7 @@ const filters = reactive({
   employee_id: ''
 })
 
-const generateForm = reactive({
-  reference_month: new Date().getMonth() + 1,
-  reference_year: new Date().getFullYear()
-})
+
 
 const months = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -415,7 +413,41 @@ const years = computed(() => {
   return [currentYear - 1, currentYear, currentYear + 1]
 })
 
+// Confirmation Modal State
+const confirmState = reactive({
+  show: false,
+  title: '',
+  message: '',
+  variant: 'primary',
+  icon: 'pi pi-exclamation-triangle',
+  confirmText: 'Confirmar',
+  loading: false,
+  action: null
+})
+
 // Computed
+const groupedPayrolls = computed(() => {
+  const groups = {}
+  
+  // Sort payrolls by year and month descending
+  const sorted = [...payrolls.value].sort((a, b) => {
+    if (b.reference_year !== a.reference_year) {
+      return b.reference_year - a.reference_year
+    }
+    return b.reference_month - a.reference_month
+  })
+
+  sorted.forEach(payroll => {
+    const period = `${months[payroll.reference_month - 1]} ${payroll.reference_year}`
+    if (!groups[period]) {
+      groups[period] = []
+    }
+    groups[period].push(payroll)
+  })
+  
+  return groups
+})
+
 const draftCount = computed(() => payrolls.value.filter(p => p.status === 'draft').length)
 const approvedCount = computed(() => payrolls.value.filter(p => p.status === 'approved').length)
 const paidCount = computed(() => payrolls.value.filter(p => p.status === 'paid').length)
@@ -459,30 +491,7 @@ const loadEmployees = async () => {
   }
 }
 
-const openGenerateModal = () => {
-  generateForm.reference_month = new Date().getMonth() + 1
-  generateForm.reference_year = new Date().getFullYear()
-  showGenerateModal.value = true
-}
 
-const closeGenerateModal = () => {
-  showGenerateModal.value = false
-}
-
-const generatePayroll = async () => {
-  generating.value = true
-  try {
-    const { data } = await adminService.payroll.generateMonthly(generateForm)
-    toast.success(data.message || 'Folha gerada com sucesso!')
-    closeGenerateModal()
-    loadPayrolls()
-  } catch (error) {
-    console.error('Erro ao gerar:', error)
-    toast.error(error.response?.data?.message || 'Erro ao gerar folha de pagamento')
-  } finally {
-    generating.value = false
-  }
-}
 
 const viewPayroll = async (payroll) => {
   try {
@@ -500,30 +509,117 @@ const closeViewModal = () => {
   selectedPayroll.value = null
 }
 
-const approvePayroll = async (payroll) => {
-  if (!confirm(`Aprovar a folha de pagamento de ${payroll.employee?.user?.name}?`)) return
-
-  try {
-    const { data } = await adminService.payroll.approve(payroll.id)
-    toast.success(data.message || 'Folha aprovada!')
-    closeViewModal()
-    loadPayrolls()
-  } catch (error) {
-    console.error('Erro ao aprovar:', error)
-    toast.error(error.response?.data?.message || 'Erro ao aprovar folha')
+const approvePayroll = (payroll) => {
+  confirmState.title = 'Aprovar Folha'
+  confirmState.message = `Tem certeza que deseja aprovar a folha de pagamento de ${payroll.employee?.full_name}?`
+  confirmState.variant = 'success'
+  confirmState.icon = 'pi pi-check-circle'
+  confirmState.confirmText = 'Aprovar'
+  confirmState.show = true
+  confirmState.action = async () => {
+    confirmState.loading = true
+    try {
+      const { data } = await adminService.payroll.approve(payroll.id)
+      toast.success(data.message || 'Folha aprovada!')
+      confirmState.show = false
+      closeViewModal()
+      loadPayrolls()
+    } catch (error) {
+      console.error('Erro ao aprovar:', error)
+      toast.error(error.response?.data?.message || 'Erro ao aprovar folha')
+    } finally {
+      confirmState.loading = false
+    }
   }
 }
 
-const deletePayroll = async (payroll) => {
-  if (!confirm(`Excluir a folha de pagamento de ${payroll.employee?.user?.name}?`)) return
+const deletePayroll = (payroll) => {
+  confirmState.title = 'Excluir Folha'
+  confirmState.message = `Tem certeza que deseja excluir permanentemente a folha de pagamento de ${payroll.employee?.full_name}? esta ação não pode ser desfeita.`
+  confirmState.variant = 'danger'
+  confirmState.icon = 'pi pi-trash'
+  confirmState.confirmText = 'Excluir Definitivamente'
+  confirmState.show = true
+  confirmState.action = async () => {
+    confirmState.loading = true
+    try {
+      const { data } = await adminService.payroll.delete(payroll.id)
+      toast.success(data.message || 'Folha excluída!')
+      confirmState.show = false
+      loadPayrolls()
+    } catch (error) {
+      console.error('Erro ao excluir:', error)
+      toast.error(error.response?.data?.message || 'Erro ao excluir folha')
+    } finally {
+      confirmState.loading = false
+    }
+  }
+}
 
+const rejectPayroll = (payroll) => {
+  confirmState.title = 'Rejeitar Folha'
+  confirmState.message = `Deseja rejeitar a folha de ${payroll.employee?.full_name} e voltá-la para o estado de Rascunho?`
+  confirmState.variant = 'warning'
+  confirmState.icon = 'pi pi-undo'
+  confirmState.confirmText = 'Rejeitar e Revisar'
+  confirmState.show = true
+  confirmState.action = async () => {
+    confirmState.loading = true
+    try {
+      await api.post(`/admin/payrolls/${payroll.id}/reject`)
+      toast.success('Folha enviada para revisão!')
+      confirmState.show = false
+      loadPayrolls()
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Erro ao processar rejeição')
+    } finally {
+      confirmState.loading = false
+    }
+  }
+}
+
+const markAsPaid = (payroll) => {
+  confirmState.title = 'Confirmar Pagamento'
+  confirmState.message = `Confirmar que o pagamento da folha de ${payroll.employee?.full_name} foi realizado com sucesso?`
+  confirmState.variant = 'primary'
+  confirmState.icon = 'pi pi-dollar'
+  confirmState.confirmText = 'Confirmar Pagamento'
+  confirmState.show = true
+  confirmState.action = async () => {
+    confirmState.loading = true
+    try {
+      const { data } = await adminService.payroll.markAsPaid(payroll.id)
+      toast.success(data.message || 'Pagamento confirmado!')
+      confirmState.show = false
+      closeViewModal()
+      loadPayrolls()
+    } catch (error) {
+      console.error('Erro ao marcar como pago:', error)
+      toast.error(error.response?.data?.message || 'Erro ao confirmar pagamento')
+    } finally {
+      confirmState.loading = false
+    }
+  }
+}
+
+const downloadPayrollPdf = async (type, payroll = null) => {
   try {
-    const { data } = await adminService.payroll.delete(payroll.id)
-    toast.success(data.message || 'Folha excluída!')
-    loadPayrolls()
+    const params = {
+      reference_month: filters.reference_month || payroll?.reference_month,
+      reference_year: filters.reference_year || payroll?.reference_year,
+      employee_id: type === 'single' ? payroll?.employee_id : null
+    }
+    
+    const { data } = await adminService.reports.payrollPdf(params)
+    const url = window.URL.createObjectURL(new Blob([data]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', type === 'single' ? `recibo_${payroll.employee.employee_number}.pdf` : 'folha_pagamento_mensal.pdf')
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
   } catch (error) {
-    console.error('Erro ao excluir:', error)
-    toast.error(error.response?.data?.message || 'Erro ao excluir folha')
+    toast.error('Erro ao gerar PDF')
   }
 }
 
@@ -615,7 +711,7 @@ onMounted(() => {
 }
 
 .header-title > i {
-  font-size: 3rem;
+  font-size: 2rem;
   color: #10b981;
   background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
   padding: 1rem;
@@ -646,6 +742,7 @@ onMounted(() => {
   border-radius: 0.75rem;
   font-weight: 600;
   cursor: pointer;
+  text-decoration: none;
   transition: all 0.2s;
   box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
 }
@@ -1027,6 +1124,28 @@ onMounted(() => {
 .btn-approve:hover {
   background: #d1fae5;
   color: #059669;
+  transform: scale(1.05);
+}
+
+.btn-paid {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 1rem;
+  background: #ede9fe;
+  color: #7c3aed;
+  font-weight: 600;
+}
+
+.btn-paid:hover {
+  background: #ddd6fe;
+  color: #6d28d9;
   transform: scale(1.05);
 }
 
@@ -1444,6 +1563,86 @@ onMounted(() => {
 
   .detail-period {
     text-align: left;
+  }
+}
+.payrolls-container {
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+  margin-bottom: 3rem;
+}
+
+.payroll-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.group-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  background: white;
+  border-radius: 1rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  border-left: 6px solid #10b981;
+}
+
+.group-title i {
+  color: #10b981;
+}
+
+.payrolls-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 1.5rem;
+}
+
+.payroll-period-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  background: #f0fdf4;
+  border-radius: 2rem;
+  color: #166534;
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 1.25rem;
+}
+
+.btn-reject {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 1rem;
+  background: #fefce8;
+  color: #a16207;
+}
+
+.btn-reject:hover {
+  background: #fef9c3;
+  color: #854d0e;
+  transform: scale(1.05);
+}
+
+@media (max-width: 768px) {
+  .payrolls-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .group-title {
+    font-size: 1.25rem;
   }
 }
 </style>

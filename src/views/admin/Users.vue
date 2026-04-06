@@ -125,7 +125,6 @@
             <select v-model="form.role" required>
               <option value="">Selecione...</option>
               <option value="admin">Administrador</option>
-              <option value="manager">Gestor</option>
               <option value="hr">RH</option>
               <option value="finance">Financeiro</option>
               <option value="employee">Funcionário</option>

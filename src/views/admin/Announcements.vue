@@ -100,10 +100,10 @@
       <i class="pi pi-megaphone"></i>
       <h3>Nenhum comunicado encontrado</h3>
       <p>Crie seu primeiro comunicado para informar os colaboradores</p>
-      <button @click="openCreateModal" class="btn-primary">
+      <!-- <button @click="openCreateModal" class="btn-primary">
         <i class="pi pi-plus"></i>
         Criar Primeiro Comunicado
-      </button>
+      </button> -->
     </div>
 
     <!-- Announcements List -->
@@ -276,6 +276,14 @@
             <small>Se desmarcado, será salvo como rascunho</small>
           </div>
 
+          <div class="form-group checkbox">
+            <label>
+              <input type="checkbox" v-model="form.send_email" />
+              <span>Enviar por E-mail</span>
+            </label>
+            <small>Envia uma notificação por e-mail para os colaboradores selecionados</small>
+          </div>
+
           <div class="modal-footer">
             <button type="button" @click="closeModal" class="btn-secondary" :disabled="saving">
               Cancelar
@@ -403,6 +411,63 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal Publish Confirmation -->
+    <div v-if="showPublishModal" class="modal-overlay" @click="closePublishModal">
+      <div class="modal-content modal-confirm" @click.stop>
+        <div class="confirm-icon publish">
+          <i class="pi pi-send"></i>
+        </div>
+        <h3>Publicar Comunicado</h3>
+        <p>Tem certeza que deseja publicar o comunicado <strong>"{{ actionAnnouncement?.title }}"</strong>?</p>
+        <p class="confirm-subtitle">Este comunicado ficará visível para os colaboradores selecionados.</p>
+        <div class="confirm-actions">
+          <button @click="closePublishModal" class="btn-secondary">Cancelar</button>
+          <button @click="confirmPublish" class="btn-primary" :disabled="actionLoading">
+            <i class="pi" :class="actionLoading ? 'pi-spin pi-spinner' : 'pi-check'"></i>
+            {{ actionLoading ? 'Publicando...' : 'Publicar' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Unpublish Confirmation -->
+    <div v-if="showUnpublishModal" class="modal-overlay" @click="closeUnpublishModal">
+      <div class="modal-content modal-confirm" @click.stop>
+        <div class="confirm-icon unpublish">
+          <i class="pi pi-ban"></i>
+        </div>
+        <h3>Despublicar Comunicado</h3>
+        <p>Tem certeza que deseja despublicar o comunicado <strong>"{{ actionAnnouncement?.title }}"</strong>?</p>
+        <p class="confirm-subtitle">Este comunicado não ficará mais visível para os colaboradores.</p>
+        <div class="confirm-actions">
+          <button @click="closeUnpublishModal" class="btn-secondary">Cancelar</button>
+          <button @click="confirmUnpublish" class="btn-warning" :disabled="actionLoading">
+            <i class="pi" :class="actionLoading ? 'pi-spin pi-spinner' : 'pi-ban'"></i>
+            {{ actionLoading ? 'Despublicando...' : 'Despublicar' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Delete Confirmation -->
+    <div v-if="showDeleteModal" class="modal-overlay" @click="closeDeleteModal">
+      <div class="modal-content modal-confirm" @click.stop>
+        <div class="confirm-icon delete">
+          <i class="pi pi-trash"></i>
+        </div>
+        <h3>Excluir Comunicado</h3>
+        <p>Tem certeza que deseja excluir o comunicado <strong>"{{ actionAnnouncement?.title }}"</strong>?</p>
+        <p class="confirm-subtitle text-danger">Esta ação não pode ser desfeita.</p>
+        <div class="confirm-actions">
+          <button @click="closeDeleteModal" class="btn-secondary">Cancelar</button>
+          <button @click="confirmDelete" class="btn-danger" :disabled="actionLoading">
+            <i class="pi" :class="actionLoading ? 'pi-spin pi-spinner' : 'pi-trash'"></i>
+            {{ actionLoading ? 'Excluindo...' : 'Excluir' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -419,6 +484,11 @@ const saving = ref(false)
 const showModal = ref(false)
 const showViewModal = ref(false)
 const showStatsModal = ref(false)
+const showPublishModal = ref(false)
+const showUnpublishModal = ref(false)
+const showDeleteModal = ref(false)
+const actionAnnouncement = ref(null)
+const actionLoading = ref(false)
 const editingAnnouncement = ref(null)
 const selectedAnnouncement = ref(null)
 const statsData = ref(null)
@@ -438,7 +508,8 @@ const form = reactive({
   priority: 'normal',
   target: 'all',
   target_ids: [],
-  is_published: false
+  is_published: false,
+  send_email: true
 })
 
 // Computed
@@ -511,6 +582,7 @@ const editAnnouncement = (announcement) => {
   form.target = announcement.target
   form.target_ids = announcement.target_ids || []
   form.is_published = announcement.is_published
+  form.send_email = announcement.send_email ?? true
   
   closeViewModal()
   showModal.value = true
@@ -531,7 +603,8 @@ const saveAnnouncement = async () => {
       priority: form.priority,
       target: form.target,
       target_ids: form.target === 'all' ? null : form.target_ids,
-      is_published: form.is_published
+      is_published: form.is_published,
+      send_email: form.send_email
     }
 
     if (editingAnnouncement.value) {
@@ -552,42 +625,81 @@ const saveAnnouncement = async () => {
   }
 }
 
-const publishAnnouncement = async (announcement) => {
-  if (!confirm(`Publicar o comunicado "${announcement.title}"?`)) return
+const publishAnnouncement = (announcement) => {
+  actionAnnouncement.value = announcement
+  showPublishModal.value = true
+}
 
+const closePublishModal = () => {
+  showPublishModal.value = false
+  actionAnnouncement.value = null
+}
+
+const confirmPublish = async () => {
+  if (!actionAnnouncement.value) return
+  actionLoading.value = true
   try {
-    const { data } = await adminService.announcements.publish(announcement.id)
+    const { data } = await adminService.announcements.publish(actionAnnouncement.value.id)
     toast.success(data.message || 'Comunicado publicado!')
+    closePublishModal()
     fetchAnnouncements()
   } catch (error) {
     console.error('Erro ao publicar:', error)
     toast.error('Erro ao publicar comunicado')
+  } finally {
+    actionLoading.value = false
   }
 }
 
-const unpublishAnnouncement = async (announcement) => {
-  if (!confirm(`Despublicar o comunicado "${announcement.title}"?`)) return
+const unpublishAnnouncement = (announcement) => {
+  actionAnnouncement.value = announcement
+  showUnpublishModal.value = true
+}
 
+const closeUnpublishModal = () => {
+  showUnpublishModal.value = false
+  actionAnnouncement.value = null
+}
+
+const confirmUnpublish = async () => {
+  if (!actionAnnouncement.value) return
+  actionLoading.value = true
   try {
-    const { data } = await adminService.announcements.unpublish(announcement.id)
+    const { data } = await adminService.announcements.unpublish(actionAnnouncement.value.id)
     toast.success(data.message || 'Comunicado despublicado')
+    closeUnpublishModal()
     fetchAnnouncements()
   } catch (error) {
     console.error('Erro ao despublicar:', error)
     toast.error('Erro ao despublicar comunicado')
+  } finally {
+    actionLoading.value = false
   }
 }
 
-const deleteAnnouncement = async (announcement) => {
-  if (!confirm(`Tem certeza que deseja excluir "${announcement.title}"?`)) return
+const deleteAnnouncement = (announcement) => {
+  actionAnnouncement.value = announcement
+  showDeleteModal.value = true
+}
 
+const closeDeleteModal = () => {
+  showDeleteModal.value = false
+  actionAnnouncement.value = null
+}
+
+const confirmDelete = async () => {
+  if (!actionAnnouncement.value) return
+  actionLoading.value = true
   try {
-    const { data } = await adminService.announcements.delete(announcement.id)
+    const { data } = await adminService.announcements.delete(actionAnnouncement.value.id)
     toast.success(data.message || 'Comunicado excluído!')
+    closeDeleteModal()
     fetchAnnouncements()
   } catch (error) {
     console.error('Erro ao excluir:', error)
     toast.error('Erro ao excluir comunicado')
+  } finally {
+    actionLoading.value = false
   }
 }
 
@@ -628,6 +740,7 @@ const resetForm = () => {
   form.target = 'all'
   form.target_ids = []
   form.is_published = false
+  form.send_email = true
 }
 
 const applyFilters = () => {
@@ -714,7 +827,7 @@ onMounted(() => {
   gap: 1rem;
 
   > i {
-    font-size: 3rem;
+    font-size: 2rem;
     color: #3b82f6;
     background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
     padding: 1rem;
@@ -1469,6 +1582,99 @@ onMounted(() => {
   height: 100%;
   background: linear-gradient(90deg, #3b82f6 0%, #10b981 100%);
   transition: width 0.5s ease;
+}
+
+/* Confirmation Modals */
+.modal-confirm {
+  max-width: 420px;
+  text-align: center;
+  padding: 2rem;
+}
+
+.confirm-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.5rem;
+  font-size: 2rem;
+}
+
+.confirm-icon.publish {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  color: #2563eb;
+}
+
+.confirm-icon.unpublish {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #d97706;
+}
+
+.confirm-icon.delete {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  color: #dc2626;
+}
+
+.modal-confirm h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 1rem 0;
+}
+
+.modal-confirm p {
+  color: #475569;
+  margin: 0 0 0.5rem 0;
+  line-height: 1.6;
+}
+
+.modal-confirm p strong {
+  color: #1e293b;
+}
+
+.confirm-subtitle {
+  font-size: 0.875rem;
+  color: #64748b !important;
+  margin-bottom: 1.5rem !important;
+}
+
+.confirm-subtitle.text-danger {
+  color: #dc2626 !important;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 1.5rem;
+}
+
+.confirm-actions .btn-secondary,
+.confirm-actions .btn-primary,
+.confirm-actions .btn-warning,
+.confirm-actions .btn-danger {
+  min-width: 120px;
+  justify-content: center;
+}
+
+.btn-warning {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+}
+
+.btn-warning:hover {
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+}
+
+.btn-danger {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+}
+
+.btn-danger:hover {
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
 }
 
 @media (max-width: 768px) {

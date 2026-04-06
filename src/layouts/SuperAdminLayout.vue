@@ -1,6 +1,9 @@
 <template>
   <div class="super-admin-layout">
-    <aside class="sidebar" :class="{ 'sidebar-collapsed': isCollapsed }">
+    <!-- Mobile Overlay -->
+    <div v-if="isMobileMenuOpen" class="sidebar-overlay" @click="isMobileMenuOpen = false"></div>
+
+    <aside class="sidebar" :class="{ 'sidebar-collapsed': isCollapsed, 'mobile-open': isMobileMenuOpen }">
       <div class="sidebar-header">
         <div class="logo">
           <i class="pi pi-shield"></i>
@@ -36,8 +39,13 @@
 
     <main class="main-content">
       <header class="top-header">
-        <div class="page-info">
-          <h1>{{ currentPageTitle }}</h1>
+        <div class="header-left">
+          <button class="mobile-menu-btn" @click="isMobileMenuOpen = true">
+            <i class="pi pi-bars"></i>
+          </button>
+          <div class="page-info">
+            <h1>{{ currentPageTitle }}</h1>
+          </div>
         </div>
         <div class="user-profile">
           <div class="user-info">
@@ -66,6 +74,13 @@ const route = useRoute()
 const authStore = useAuthStore()
 
 const isCollapsed = ref(false)
+const isMobileMenuOpen = ref(false)
+
+// Close mobile menu on route change
+import { watch } from 'vue'
+watch(() => route.path, () => {
+  isMobileMenuOpen.value = false
+})
 const user = computed(() => authStore.user)
 
 const currentPageTitle = computed(() => {
@@ -268,20 +283,49 @@ const handleLogout = async () => {
   flex: 1;
 }
 
+@media (max-width: 1024px) {
+  .sidebar { width: 80px; }
+  .sidebar span, .sidebar .toggle-btn { display: none; }
+}
+
 @media (max-width: 768px) {
+  .top-header { padding: 0 1rem; }
+  
+  .mobile-menu-btn {
+    display: block;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: #1e293b;
+    cursor: pointer;
+    margin-right: 1rem;
+  }
+
+  .header-left { display: flex; align-items: center; }
+
+  .user-info { display: none; }
+
   .sidebar {
     position: fixed;
-    z-index: 100;
+    z-index: 1000;
     left: -260px;
+    width: 260px !important;
+    box-shadow: 10px 0 15px rgba(0,0,0,0.1);
+    transform: none !important;
   }
   
-  .sidebar.sidebar-collapsed {
-    left: 0;
-    width: 260px;
-  }
+  .sidebar span, .sidebar .toggle-btn { display: inline; }
+
+  .sidebar.mobile-open { left: 0; }
   
-  .main-content {
-    margin-left: 0;
+  .sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 999;
+    backdrop-filter: blur(2px);
   }
+
+  .content { padding: 1rem; }
 }
 </style>
