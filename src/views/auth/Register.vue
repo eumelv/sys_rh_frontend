@@ -3,7 +3,7 @@
     <div class="auth-container">
       <div class="auth-card">
         <div class="auth-header">
-          <img src="" alt="Logo" class="auth-logo" />
+         <img src="/images/contentlogo_original.png" alt="Logo" class="auth-logo" />
           <h1>Criar Conta</h1>
           <p>Comece seu teste grátis de 28 dias hoje!</p>
         </div>
@@ -88,7 +88,7 @@
       </div>
 
       <div class="auth-illustration">
-        <h2>Plano Free - 28 dias</h2>
+        <h2>Plano Grátis - 28 dias</h2>
         <p>Experimente gratuitamente todas as funcionalidades básicas:</p>
         <ul class="features-list">
           <li><i class="pi pi-check"></i> Até 5 usuários</li>
@@ -181,11 +181,10 @@ const handleRegister = async () => {
 }
 
 .auth-logo {
-  width: 60px;
+  width: 190px;
   height: 60px;
   margin-bottom: 1rem;
 }
-
 .auth-header h1 {
   font-size: 1.875rem;
   font-weight: 700;

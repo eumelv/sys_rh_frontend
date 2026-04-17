@@ -7,12 +7,13 @@
     <aside class="sidebar" :class="{ 'collapsed': isCollapsed, 'mobile-open': isMobileMenuOpen }">
       <div class="sidebar-header">
         <div class="logo">
-          <i class="pi pi-briefcase"></i>
-          <span v-if="!isCollapsed">SYS RH</span>
+          <img src="/images/contentlogo_branco.png" alt="Logo" class="auth-logo" />
+          
         </div>
-        <button class="toggle-btn" @click="isCollapsed = !isCollapsed">
+       <!-- 
+         <button class="toggle-btn" @click="isCollapsed = !isCollapsed">
           <i :class="isCollapsed ? 'pi pi-chevron-right' : 'pi pi-chevron-left'"></i>
-        </button>
+        </button> -->
       </div>
 
 <nav class="sidebar-nav">
@@ -399,6 +400,11 @@ const confirmLogout = async () => {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+}
+
+.auth-logo{
+  width: 160px;
+  height: 50px;
 }
 
 .nav-item {

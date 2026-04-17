@@ -3,8 +3,8 @@
     <div class="auth-container">
       <div class="auth-card">
         <div class="auth-header">
-          <img src="" alt="Logo" class="auth-logo" />
-          <h1>SYS RH</h1>
+          <img src="/images/contentlogo_original.png" alt="Logo" class="auth-logo" />
+        
           <p>Bem-vindo de volta! Faça login na sua conta.</p>
         </div>
 
@@ -164,7 +164,7 @@ const handleLogin = async () => {
 }
 
 .auth-logo {
-  width: 60px;
+  width: 190px;
   height: 60px;
   margin-bottom: 1rem;
 }

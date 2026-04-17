@@ -7,12 +7,11 @@
     <aside class="sidebar" :class="{ 'collapsed': isCollapsed, 'mobile-open': isMobileMenuOpen }">
       <div class="sidebar-header">
         <div class="logo">
-          <i class="pi pi-user"></i>
-          <span v-if="!isCollapsed">Portal Colaborador</span>
+          <img src="/images/contentlogo_branco.png" alt="Logo" class="auth-logo" />
         </div>
-        <button class="toggle-btn" @click="isCollapsed = !isCollapsed">
+       <!--  <button class="toggle-btn" @click="isCollapsed = !isCollapsed">
           <i :class="isCollapsed ? 'pi pi-chevron-right' : 'pi pi-chevron-left'"></i>
-        </button>
+        </button> -->
       </div>
 
       <nav class="sidebar-nav">
@@ -324,6 +323,11 @@ const confirmLogout = async () => {
   color: #1e293b;
 }
 
+.auth-logo{
+  width: 160px;
+  height: 50px;
+}
+
 .mobile-menu-btn {
   display: none;
 }
@@ -558,4 +562,4 @@ const confirmLogout = async () => {
     opacity: 1;
   }
 }
-</style>
+</style>
