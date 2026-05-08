@@ -154,7 +154,7 @@
 
           <div v-if="just.file_path" class="justification-file">
             <i class="pi pi-paperclip"></i>
-            <a :href="just.file_url" target="_blank">Ver Anexo</a>
+            <a :href="just.file_url" download :title="'Baixar ' + just.file_url.split('/').pop()">Baixar Anexo</a>
           </div>
 
           <div v-if="just.status !== 'pending'" class="review-section">
