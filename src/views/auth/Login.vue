@@ -137,7 +137,7 @@ const handleLogin = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(rgba(15, 23, 42, 0.75), rgba(15, 23, 42, 0.75)), url('/images/auth-bg.png');
+  background: linear-gradient(rgba(15, 23, 42, 0.75), rgba(15, 23, 42, 0.75)), url('/images/47745.jpg');
   background-size: cover;
   background-position: center;
   padding: 2rem;
@@ -209,8 +209,8 @@ const handleLogin = async () => {
 
 .form-group input:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: #2dd4a8;
+  box-shadow: 0 0 0 3px rgba(45, 212, 168, 0.15);
 }
 
 .form-group input:disabled {
@@ -234,7 +234,7 @@ const handleLogin = async () => {
 }
 
 .forgot-link {
-  color: #667eea;
+  color: #2dd4a8;
   text-decoration: none;
   font-size: 0.875rem;
   font-weight: 500;
@@ -246,7 +246,7 @@ const handleLogin = async () => {
 
 .btn-primary {
   padding: 0.875rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #2dd4a8 0%, #0f4c81 100%);
   color: white;
   border: none;
   border-radius: 8px;
@@ -278,7 +278,7 @@ const handleLogin = async () => {
 }
 
 .link {
-  color: #667eea;
+  color: #2dd4a8;
   font-weight: 600;
   text-decoration: none;
 }
@@ -288,7 +288,7 @@ const handleLogin = async () => {
 }
 
 .auth-illustration {
-  background: linear-gradient(rgba(102, 126, 234, 0.8), rgba(118, 75, 162, 0.8)), url('/images/auth-bg.png');
+  background: linear-gradient(135deg, rgba(15, 76, 129, 0.85), rgba(45, 212, 168, 0.7)), url('/images/47745.jpg');
   background-size: cover;
   background-position: center;
   color: white;
@@ -338,12 +338,46 @@ const handleLogin = async () => {
 }
 
 @media (max-width: 768px) {
+  .auth-page {
+    padding: 1rem;
+  }
   .auth-container {
     grid-template-columns: 1fr;
   }
-  
+  .auth-card {
+    padding: 1.5rem;
+  }
   .auth-illustration {
     display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-page {
+    padding: 0.5rem;
+  }
+  .auth-card {
+    padding: 1.2rem;
+  }
+  .auth-logo {
+    width: 140px;
+    height: auto;
+  }
+  .auth-header h1 {
+    font-size: 1.4rem;
+  }
+  .form-group input {
+    padding: 0.65rem 0.8rem;
+    font-size: 0.9rem;
+  }
+  .form-options {
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: flex-start;
+  }
+  .btn-primary {
+    padding: 0.75rem;
+    font-size: 0.9rem;
   }
 }
 </style>

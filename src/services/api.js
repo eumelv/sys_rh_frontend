@@ -2,7 +2,7 @@ import axios from 'axios'
 import router from '@/router'
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
+  baseURL: import.meta.env.VITE_API_URL || 'https://rh.enviazap.net/api',
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
@@ -36,9 +36,12 @@ api.interceptors.response.use(
     }
     
     if (error.response?.status === 403) {
-      // Subscription expired or feature not available
-      if (error.response.data?.subscription_expired) {
-        router.push('/subscription-expired')
+      const data = error.response.data
+      if (data?.license_expired || data?.subscription_expired) {
+        const currentPath = window.location.pathname
+        if (currentPath !== '/license-expired' && currentPath !== '/admin/subscription') {
+          router.push('/license-expired')
+        }
       }
     }
     

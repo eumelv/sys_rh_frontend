@@ -19,7 +19,7 @@
 <nav class="sidebar-nav">
   <router-link to="/admin/dashboard" class="nav-item">
     <i class="pi pi-home"></i>
-    <span v-if="!isCollapsed">Dashboard</span>
+    <span v-if="!isCollapsed">Início</span>
   </router-link>
   
   <router-link to="/admin/employees" class="nav-item">
@@ -124,6 +124,11 @@
   <router-link v-if="!isFinance && !isHR" to="/admin/settings" class="nav-item">
     <i class="pi pi-cog"></i>
     <span v-if="!isCollapsed">Configurações</span>
+  </router-link>
+
+  <router-link to="/admin/subscription" class="nav-item nav-subscription">
+    <i class="pi pi-credit-card"></i>
+    <span v-if="!isCollapsed">Assinatura</span>
   </router-link>
 </nav>
 
@@ -258,6 +263,7 @@ const currentPageTitle = computed(() => {
     'WorkSchedules': 'Horários de Trabalho',
     'Settings': 'Configurações da Empresa',
     'AdminReports': 'Relatórios & Analytics',
+    'AdminSubscription': 'Assinatura & Licença',
   }
   return titles[route.name] || 'HR System'
 })
@@ -527,6 +533,18 @@ const confirmLogout = async () => {
 .logout-btn:hover {
   background-color: rgba(239, 68, 68, 0.1);
   color: #ef4444;
+}
+
+.nav-subscription {
+  color: #2dd4a8 !important;
+  border-left: 3px solid #2dd4a8;
+  margin-top: 0.5rem;
+}
+
+.nav-subscription:hover,
+.nav-subscription.router-link-active {
+  background-color: rgba(45, 212, 168, 0.15) !important;
+  color: #2dd4a8 !important;
 }
 
 .main-content {

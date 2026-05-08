@@ -4,7 +4,15 @@ import { useAuthStore } from '@/stores/auth'
 const routes = [
   {
     path: '/',
-    redirect: '/login',
+    name: 'Landing',
+    component: () => import('@/views/LandingPage.vue'),
+    meta: { requiresAuth: false, layout: 'blank' },
+  },
+  {
+    path: '/help',
+    name: 'Help',
+    component: () => import('@/views/HelpPage.vue'),
+    meta: { requiresAuth: false, layout: 'blank' },
   },
   {
     path: '/login',
@@ -29,6 +37,12 @@ const routes = [
     name: 'ResetPassword',
     component: () => import('@/views/auth/ResetPassword.vue'),
     meta: { requiresAuth: false, layout: 'blank' },
+  },
+  {
+    path: '/license-expired',
+    name: 'LicenseExpired',
+    component: () => import('@/views/LicenseExpired.vue'),
+    meta: { requiresAuth: true, layout: 'blank' },
   },
   {
     path: '/jobs/:companySlug',
@@ -121,6 +135,11 @@ const routes = [
         path: 'settings',
         name: 'Settings',
         component: () => import('@/views/admin/Settings.vue'),
+      },
+      {
+        path: 'subscription',
+        name: 'AdminSubscription',
+        component: () => import('@/views/admin/Subscription.vue'),
       },
        {
          path: 'payroll',

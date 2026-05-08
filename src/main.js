@@ -43,6 +43,28 @@ app.use(Toast, {
   rtl: false
 })
 
+// Landing page scroll animation directive
+app.directive('observe', {
+  mounted(el) {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('observed')
+            observer.unobserve(entry.target)
+          }
+        })
+      },
+      { threshold: 0.12 }
+    )
+    observer.observe(el)
+    el._observer = observer
+  },
+  unmounted(el) {
+    if (el._observer) el._observer.disconnect()
+  },
+})
+
 app.mount('#app')
 
 // ✅ INICIALIZAR AUTH **APÓS** MONTAR
