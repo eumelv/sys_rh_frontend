@@ -476,7 +476,9 @@ const loadAttendances = async () => {
   loadingHistory.value = true
   try {
     const { data } = await employeeService.attendance.getAll(filters)
-    attendances.value = data
+    // Garantir que attendances seja sempre um array, lidando com possível paginação
+    attendances.value = Array.isArray(data) ? data : (data.data || [])
+    console.log('Histórico carregado:', attendances.value)
   } catch (error) {
     console.error('Erro ao carregar histórico:', error)
     toast.error('Erro ao carregar histórico')
@@ -583,26 +585,37 @@ const formatDateShort = (dateString) => {
   if (!dateString) return '-'
   
   try {
-    // Adicionar o timezone para evitar problemas de fuso horário
-    const date = new Date(dateString + 'T00:00:00')
+    // Se vier com T (ISO), parse direto. Se não, assume Y-m-d e adiciona tempo para evitar problemas de fuso
+    const date = dateString.includes('T') ? new Date(dateString) : new Date(dateString + 'T00:00:00')
     
+    if (isNaN(date.getTime())) return 'Data Inválida'
+
     return date.toLocaleDateString('pt-PT', { 
       day: '2-digit',
       month: 'short'
     })
   } catch (error) {
-    console.error('Erro ao formatar data:', dateString, error)
+    console.error('Erro ao formatar data curta:', dateString, error)
     return '-'
   }
 }
+
 const formatDate = (dateString) => {
   if (!dateString) return '-'
-  const date = new Date(dateString)
-  return date.toLocaleDateString('pt-PT', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric'
-  })
+  try {
+    const date = dateString.includes('T') ? new Date(dateString) : new Date(dateString + 'T00:00:00')
+    
+    if (isNaN(date.getTime())) return 'Data Inválida'
+
+    return date.toLocaleDateString('pt-PT', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
+    })
+  } catch (error) {
+    console.error('Erro ao formatar data longa:', dateString, error)
+    return '-'
+  }
 }
 
 // Lifecycle
